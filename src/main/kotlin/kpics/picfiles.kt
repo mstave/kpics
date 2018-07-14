@@ -10,6 +10,7 @@ import java.nio.file.Paths
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentSkipListSet
+import java.util.zip.Adler32
 import kotlin.collections.ArrayList
 import kotlin.collections.set
 
@@ -102,23 +103,45 @@ class PicFiles(private val basePathStr: String) : PicInterface {
 
     fun getDupes(): ConcurrentHashMap<String, ConcurrentSkipListSet<String>> {
         val md5s = ConcurrentHashMap<String, String>()
-        val dupes = ConcurrentHashMap<String, ConcurrentSkipListSet<String>>()
+        val sizes = ConcurrentHashMap<String, String>()
+        val dupeSizes = ConcurrentHashMap<String, ConcurrentSkipListSet<String>>()
+//        filePaths.forEach { p ->
         filePaths.parallelStream().forEach { p ->
             val f = p.toString()
-            val md5 = getMD5(p)
-            val existingPath = md5s.putIfAbsent(md5, f)
+//            val md5 = getChecksum(p)
+//
+            val strLen = p.toFile().length().toString()
+//            val md5 = getMD5(p)
+            //1366
+            val existingPath = sizes.putIfAbsent(strLen, f)
             if (existingPath != null) {
-                val doesExist = dupes.putIfAbsent(
-                        md5,
+                val doesExist = dupeSizes.putIfAbsent(
+                        strLen,
                         ConcurrentSkipListSet(setOf(f))
-                                                 )
+                                                     )
                 doesExist?.let {
-                    dupes[md5]!!.add(f)
+                    dupeSizes[strLen]!!.add(f)
                 }
-                dupes[md5]!!.add(existingPath)
+                dupeSizes[strLen]!!.add(existingPath)
             }
         }
-        return dupes
+        val dupeMD5s = ConcurrentHashMap<String, ConcurrentSkipListSet<String>>()
+        println("After initial pass: ${dupeSizes.size}")
+        dupeSizes.values.parallelStream().forEach { pathList ->
+            pathList.forEach { pathStr ->
+                val md5 = getMD5(Paths.get(pathStr))
+                val existingMD5 = md5s.putIfAbsent(md5, pathStr)
+                if (existingMD5 != null) {
+                    val doesExistMD5 =
+                            dupeMD5s.putIfAbsent(md5, ConcurrentSkipListSet(setOf(pathStr)))
+                    doesExistMD5?.let {
+                        dupeMD5s[md5]!!.add(existingMD5)
+                    }
+                    dupeMD5s[md5]!!.add(existingMD5)
+                }
+            }
+        }
+        return dupeMD5s
     }
 
     fun RootDupes(
@@ -141,8 +164,19 @@ class PicFiles(private val basePathStr: String) : PicInterface {
     }
 }
 
+fun getChecksum(path: Path): String {
+    val checksum = Adler32()
+//    val checksum = CRC32()
+    val bytes = path.toFile().readBytes()
+    checksum.update(bytes, 0, bytes.size)
+    val lngChecksum = checksum.value
+
+    return "$lngChecksum"
+}
+
 fun getMD5(path: Path): String {
     // 59 mins with MD2, 1366 dupes
+//    val md = java.security.MessageDigest.getInstance("SHA")
     val md = java.security.MessageDigest.getInstance("MD5")
     val bytes = md.digest(path.toFile().readBytes())
     var result = ""

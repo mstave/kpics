@@ -3,6 +3,7 @@ package kgui.view
 import com.drew.imaging.ImageMetadataReader
 import com.drew.metadata.exif.ExifThumbnailDirectory
 import com.drew.metadata.exif.ExifThumbnailDirectory.TAG_THUMBNAIL_OFFSET
+import javafx.beans.property.SimpleBooleanProperty
 import javafx.beans.property.SimpleListProperty
 import javafx.beans.property.SimpleObjectProperty
 import javafx.beans.property.SimpleStringProperty
@@ -25,7 +26,6 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentSkipListSet
 import javax.json.Json
 import javax.json.JsonObject
-import org.controlsfx.control.Notifications
 
 class MainView : View("Pics") {
     private val controller: PicsController by inject()
@@ -446,10 +446,14 @@ class ExifView : View() {
 class DupeView : View() {
     override val root = scrollpane(true, true)
     private val dupeC: DupeController by inject()
+    var msg = text("Searching for duplicates, this may take a few minutes...")
 
     init {
         with(root) {
             vbox {
+                msg.visibleWhen(!dupeC.doneSearching)
+                this.add(msg)
+
                 listview<String> {
                     prefWidth = 300.0
                     minHeight = 600.0
@@ -466,6 +470,7 @@ class DupeController : Controller() {
     val dupesProperty = SimpleObjectProperty<ConcurrentHashMap<String, ConcurrentSkipListSet<String>>>(
             ConcurrentHashMap<String, ConcurrentSkipListSet<String>>())
     var dupes by dupesProperty
+    var doneSearching = SimpleBooleanProperty(false)
     var dupeStrings = ArrayList<String>().observable()
     fun getTheDupes(): ConcurrentHashMap<String, ConcurrentSkipListSet<String>>? {
         return dupes
@@ -476,9 +481,11 @@ class DupeController : Controller() {
             picsCont.picFiles?.first()?.asJsonObject()?.toModel<PicFileModel>()?.pf?.let {
                 dupes = it.getDupes()
             }
+            doneSearching.set(true)
+            println("Dupes: " + dupes.count())
         } ui {
-            dupes.forEach() {
-                dupeStrings.add(it.key + " : " + it.value.toString())
+            dupes.values.forEach {
+                    dupeStrings.add(it.toString().removeSurrounding("[","]"))
             }
         }
     }

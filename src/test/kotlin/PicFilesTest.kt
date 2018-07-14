@@ -48,8 +48,8 @@ internal class PicFilesTest {
 //    }
     @Test
     fun testMD5sUnique() {
-//        val testPicsPath = "/Users/mstave/Dropbox/Photos/pics/uk/"
         val testPicsPathStr = "/Users/mstave/Dropbox/Photos/pics/"
+//        val testPicsPathStr = "/Users/mstave/Dropbox/Photos/pics/"
         val pics = PicFiles(testPicsPathStr)
         val dupe = pics.getDupes()
         println(dupe.size)
