@@ -471,21 +471,18 @@ class DupeController : Controller() {
     var dupes by dupesProperty
     var doneSearching = SimpleBooleanProperty(false)
     var dupeStrings = ArrayList<String>().observable()
-    fun getTheDupes(): HashSet<HashSet<String>>? {
-        return dupes
-    }
+    var pf : PicFiles? = null
 
     init {
         runAsync {
             picsCont.picFiles?.first()?.asJsonObject()?.toModel<PicFileModel>()?.pf?.let {
+                pf = it
                 dupes = it.getDupes()
             }
             doneSearching.set(true)
-            println("Dupes: " + dupes.count())
         } ui {
-            println("Size: ${dupes.size}")
-            dupes.forEach {
-                    dupeStrings.add(it.toString().removeSurrounding("[","]"))
+            pf?.let {
+                dupeStrings.addAll(it.getDupeFileList())
             }
         }
     }

@@ -118,6 +118,23 @@ class PicFiles(private val basePathStr: String) : PicInterface {
         return result
     }
 
+    fun getDupesForFile(fName: String): ArrayList<String> {
+        var result = ArrayList<String>()
+        val dupes = getDupes()
+        dupes.forEach { dupeList ->
+            if (dupeList.contains(fName)) {
+                result.addAll(dupeList.filter {
+                    it != fName
+                })
+            }
+            if (dupeList.contains("/Users/mstave/Dropbox/Photos/pics/g1.jpg")) {
+//                if (dupeList.contains("/Users/mstave/Dropbox/Photos/pics/000adel332.jpg")) {
+                println("Break! $dupeList")
+            }
+        }
+        return result
+    }
+
     fun getDupesForDir(dir: String): ArrayList<String> {
         var result = ArrayList<String>()
         val dupes = getDupes().flatten()
@@ -156,24 +173,17 @@ class PicFiles(private val basePathStr: String) : PicInterface {
         val md5s = ConcurrentHashMap<String, String>()
         val sizes = ConcurrentHashMap<String, String>()
         val dupeSizes = ConcurrentHashMap<String, ConcurrentSkipListSet<String>>()
-//        filePaths.forEach { p ->
         filePaths.parallelStream().forEach { p ->
             val f = p.toString()
-//            val md5 = getChecksum(p)
-//
             val strLen = p.toFile().length().toString()
-//            val md5 = getMD5(p)
-            //1366
             val existingPath = sizes.putIfAbsent(strLen, f)
             if (existingPath != null) {
                 val doesExist = dupeSizes.putIfAbsent(
                         strLen,
-                        ConcurrentSkipListSet(setOf(f))
-                                                     )
+                        ConcurrentSkipListSet(setOf(f).plus(existingPath)))
                 doesExist?.let {
                     dupeSizes[strLen]!!.add(f)
                 }
-                dupeSizes[strLen]!!.add(existingPath)
             }
         }
         val dupeMD5s = ConcurrentHashMap<String, ConcurrentSkipListSet<String>>()
@@ -184,11 +194,11 @@ class PicFiles(private val basePathStr: String) : PicInterface {
                 val existingMD5 = md5s.putIfAbsent(md5, pathStr)
                 if (existingMD5 != null) {
                     val doesExistMD5 =
-                            dupeMD5s.putIfAbsent(md5, ConcurrentSkipListSet(setOf(pathStr)))
+                            dupeMD5s.putIfAbsent(md5, ConcurrentSkipListSet(setOf(pathStr).plus(
+                                    existingMD5)))
                     doesExistMD5?.let {
-                        dupeMD5s[md5]!!.add(existingMD5)
+                        dupeMD5s[md5]!!.add(pathStr)
                     }
-                    dupeMD5s[md5]!!.add(existingMD5)
                 }
             }
         }
@@ -196,6 +206,16 @@ class PicFiles(private val basePathStr: String) : PicInterface {
         dupeMD5s.values.forEach {
             ret.add(it.toHashSet())
         }
+        dupeFiles = ret
+        return ret
+    }
+
+    fun getDupeFileList(): ArrayList<String> {
+        var ret = ArrayList<String>()
+        getDupes().flatten().forEach {
+            ret.add("${it} : ${getDupesForFile(it).toString()}")
+        }
+        ret.sort()
         return ret
     }
 
