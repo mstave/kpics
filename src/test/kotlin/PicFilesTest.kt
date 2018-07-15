@@ -1,4 +1,6 @@
 
+import kotlinx.coroutines.experimental.async
+import kotlinx.coroutines.experimental.runBlocking
 import kpics.PicFiles
 import mu.KotlinLogging
 import org.junit.jupiter.api.Assertions
@@ -72,7 +74,46 @@ internal class PicFilesTest {
                 "no testPicsPath found"
                                   )
     }
+    @Test
+    fun testDupeMemoize() {
+        val pf = getTestPics()
+        val d1 = async {pf.getDupes()}
+        val d2 = async {pf.getDupes() }
+        runBlocking {
+            println( d1.await().size)
+            println( d2.await().size)
+        }
 
+    }
+    @Test
+    fun testForEachDupe() {
+        getTestPics().getDupes().forEach {
+            println(it)
+        }
+    }
+    @Test
+    fun testGetDirStats() {
+        val res = getTestPics().getDirStats()
+        println(res.toString())
+        res.forEach {
+            if (it.value.first == it.value.second) {
+                println(it.key)
+            }
+        }
+    }
+    @Test
+    fun testRootForDupes() {
+        val tp = getTestPics()
+        tp.getDupesForDir(tp.basePath.toString()).forEach {
+            println(it)
+        }
+    }
+    @Test
+    fun testGetDirAllDupes() {
+        getTestPics().getDirStats().forEach {
+            println(it)
+        }
+    }
     @Test
     fun testWin() {
         org.junit.jupiter.api.Assumptions.assumeTrue(System.getProperty("os.name").startsWith("Windows"))

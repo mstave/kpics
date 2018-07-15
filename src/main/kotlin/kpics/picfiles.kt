@@ -12,12 +12,14 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentSkipListSet
 import java.util.zip.Adler32
 import kotlin.collections.ArrayList
+import kotlin.collections.HashMap
 import kotlin.collections.set
 
 class PicFiles(private val basePathStr: String) : PicInterface {
     // @TODO check out delegating properties from basePath to be exposed as kpics.PicFiles properties
     private val logger: KLogger = KotlinLogging.logger {}
     var basePath: Path = Paths.get(basePathStr)
+    var dupeFiles: HashSet<HashSet<String>>? = null
     override fun getBaseStr() = basePathStr
     var filePaths: TreeSet<Path> = TreeSet()
     //    var filePaths: TreeSet<Path> = sortedSetOf(basePath)
@@ -101,7 +103,56 @@ class PicFiles(private val basePathStr: String) : PicInterface {
         return false
     }
 
-    fun getDupes(): ConcurrentHashMap<String, ConcurrentSkipListSet<String>> {
+    fun getDirStats(): HashMap<String, Pair<Int, Int>> { // path: totalFileCount, dupeFileCount
+        val dupes = getDupes()
+        var result = HashMap<String, Pair<Int, Int>>()
+        filePaths.forEach { path ->
+            result[path.parent.toString()] =
+                    result[path.parent.toString()]?.let { Pair(it.first + 1, 0) } ?: Pair(1, 0)
+        }
+        dupes.flatten().forEach { pathStr ->
+            result[Paths.get(pathStr).parent.toString()] = Pair(
+                    result[Paths.get(pathStr).parent.toString()]!!.first,
+                    result[Paths.get(pathStr).parent.toString()]!!.second + 1)
+        }
+        return result
+    }
+
+    fun getDupesForDir(dir: String): ArrayList<String> {
+        var result = ArrayList<String>()
+        val dupes = getDupes().flatten()
+        val files = File(dir).listFiles()
+        files.forEach {
+            if (it.isFile) {
+                if (dupes.contains(it.toString())) {
+                    result.add(it.toString())
+                } else {
+                    println(it.toString())
+                }
+            }
+        }
+
+        println("------------")
+        return result
+    }
+
+    fun getDirsWithAllDupes(): ArrayList<String> {
+        var retval = ArrayList<String>()
+        val res = getDirStats()
+        res.forEach {
+            if (it.value.first == it.value.second) {
+                retval.add(it.key)
+            }
+        }
+        return retval
+    }
+
+    @Synchronized
+    fun getDupes(): HashSet<HashSet<String>> {
+        // memoize, since this may be an expensive operation
+        dupeFiles?.let {
+            return it
+        }
         val md5s = ConcurrentHashMap<String, String>()
         val sizes = ConcurrentHashMap<String, String>()
         val dupeSizes = ConcurrentHashMap<String, ConcurrentSkipListSet<String>>()
@@ -141,7 +192,11 @@ class PicFiles(private val basePathStr: String) : PicInterface {
                 }
             }
         }
-        return dupeMD5s
+        val ret = HashSet<HashSet<String>>()
+        dupeMD5s.values.forEach {
+            ret.add(it.toHashSet())
+        }
+        return ret
     }
 
     fun RootDupes(

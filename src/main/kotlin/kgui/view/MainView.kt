@@ -467,12 +467,11 @@ class DupeView : View() {
 
 class DupeController : Controller() {
     private val picsCont: PicsController by inject()
-    val dupesProperty = SimpleObjectProperty<ConcurrentHashMap<String, ConcurrentSkipListSet<String>>>(
-            ConcurrentHashMap<String, ConcurrentSkipListSet<String>>())
+    val dupesProperty = SimpleObjectProperty<HashSet<HashSet<String>>>()
     var dupes by dupesProperty
     var doneSearching = SimpleBooleanProperty(false)
     var dupeStrings = ArrayList<String>().observable()
-    fun getTheDupes(): ConcurrentHashMap<String, ConcurrentSkipListSet<String>>? {
+    fun getTheDupes(): HashSet<HashSet<String>>? {
         return dupes
     }
 
@@ -484,7 +483,8 @@ class DupeController : Controller() {
             doneSearching.set(true)
             println("Dupes: " + dupes.count())
         } ui {
-            dupes.values.forEach {
+            println("Size: ${dupes.size}")
+            dupes.forEach {
                     dupeStrings.add(it.toString().removeSurrounding("[","]"))
             }
         }
