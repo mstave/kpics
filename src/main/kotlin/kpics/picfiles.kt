@@ -20,7 +20,6 @@ class PicFiles(private val basePathStr: String) : PicInterface {
     private val logger: KLogger = KotlinLogging.logger {}
     var basePath: Path = Paths.get(basePathStr)
     var dupeFiles: HashSet<HashSet<String>>? = null
-    override fun getBaseStr() = basePathStr
     var filePaths: TreeSet<Path> = TreeSet()
     //    var filePaths: TreeSet<Path> = sortedSetOf(basePath)
     //    var filePaths: MutableList<Path> = mutableListOf<Path>()
@@ -28,6 +27,7 @@ class PicFiles(private val basePathStr: String) : PicInterface {
         return filePaths.size
     }
 
+    override fun getBaseStr() = basePathStr
     override val relativePathSet: HashSet<String>
         get() {
             return HashSet((getPaths().map {
@@ -148,7 +148,6 @@ class PicFiles(private val basePathStr: String) : PicInterface {
                 }
             }
         }
-
         println("------------")
         return result
     }
@@ -170,7 +169,41 @@ class PicFiles(private val basePathStr: String) : PicInterface {
         dupeFiles?.let {
             return it
         }
+        val dupeSizes = getDupeSizes()
+        println("After initial pass: ${dupeSizes.size}")
+        val ret = HashSet<HashSet<String>>()
+        getDupeMd5(dupeSizes).values.forEach {
+            ret.add(it.toHashSet())
+        }
+        dupeFiles = ret
+        return ret
+    }
+
+    private fun getDupeMd5(
+            priorDupes: ConcurrentHashMap<String, ConcurrentSkipListSet<String>>):
+            ConcurrentHashMap<String, ConcurrentSkipListSet<String>> {
         val md5s = ConcurrentHashMap<String, String>()
+        val dupeMD5s = ConcurrentHashMap<String, ConcurrentSkipListSet<String>>()
+        priorDupes.values.parallelStream().forEach { pathList ->
+            pathList.forEach { pathStr ->
+                val md5 = getMD5(Paths.get(pathStr))
+                val existingMD5 = md5s.putIfAbsent(md5, pathStr)
+                if (existingMD5 != null) {
+                    val doesExistMD5 =
+                            dupeMD5s.putIfAbsent(md5, ConcurrentSkipListSet(setOf(pathStr).plus(
+                                    existingMD5)))
+                    doesExistMD5?.let {
+                        dupeMD5s[md5]!!.add(pathStr)
+                    }
+                }
+            }
+        }
+        return dupeMD5s
+    }
+// TODO pass filePaths as a param
+
+    private fun getDupeSizes():
+            ConcurrentHashMap<String, ConcurrentSkipListSet<String>> {
         val sizes = ConcurrentHashMap<String, String>()
         val dupeSizes = ConcurrentHashMap<String, ConcurrentSkipListSet<String>>()
         filePaths.parallelStream().forEach { p ->
@@ -186,34 +219,13 @@ class PicFiles(private val basePathStr: String) : PicInterface {
                 }
             }
         }
-        val dupeMD5s = ConcurrentHashMap<String, ConcurrentSkipListSet<String>>()
-        println("After initial pass: ${dupeSizes.size}")
-        dupeSizes.values.parallelStream().forEach { pathList ->
-            pathList.forEach { pathStr ->
-                val md5 = getMD5(Paths.get(pathStr))
-                val existingMD5 = md5s.putIfAbsent(md5, pathStr)
-                if (existingMD5 != null) {
-                    val doesExistMD5 =
-                            dupeMD5s.putIfAbsent(md5, ConcurrentSkipListSet(setOf(pathStr).plus(
-                                    existingMD5)))
-                    doesExistMD5?.let {
-                        dupeMD5s[md5]!!.add(pathStr)
-                    }
-                }
-            }
-        }
-        val ret = HashSet<HashSet<String>>()
-        dupeMD5s.values.forEach {
-            ret.add(it.toHashSet())
-        }
-        dupeFiles = ret
-        return ret
+        return dupeSizes
     }
 
     fun getDupeFileList(): ArrayList<String> {
         var ret = ArrayList<String>()
         getDupes().flatten().forEach {
-            ret.add("${it} : ${getDupesForFile(it).toString()}")
+            ret.add("${it} : ${getDupesForFile(it)}")
         }
         ret.sort()
         return ret
