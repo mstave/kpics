@@ -15,7 +15,7 @@ import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
 import kotlin.collections.set
 
-class PicFiles(private val basePathStr: String) : PicInterface {
+class PicFiles(private val basePathStr: String) : AbstractPicCollection() {
     // @TODO check out delegating properties from basePath to be exposed as kpics.PicFiles properties
     private val logger: KLogger = KotlinLogging.logger {}
     var basePath: Path = Paths.get(basePathStr)
@@ -23,14 +23,13 @@ class PicFiles(private val basePathStr: String) : PicInterface {
     var filePaths: TreeSet<Path> = TreeSet()
     //    var filePaths: TreeSet<Path> = sortedSetOf(basePath)
     //    var filePaths: MutableList<Path> = mutableListOf<Path>()
-    override fun getCount(): Int {
-        return filePaths.size
-    }
-
-    override fun getBaseStr() = basePathStr
+    override val count: Int
+        get() = filePaths.size
+    override val baseStr
+        get() = basePathStr
     override val relativePathSet: HashSet<String>
         get() {
-            return HashSet((getPaths().map {
+            return HashSet((paths.map {
                 it.toString().removePrefix(
                         basePathStr + File.separator)
             }).toSet())
@@ -55,12 +54,11 @@ class PicFiles(private val basePathStr: String) : PicInterface {
     //fun toPathFromRoot() : String {
 //        return "${folder.pathFromRoot}$baseName.$extension"
 //}
-    override fun getPaths(): TreeSet<Path> {
-        return filePaths
-    }
+    override val paths: TreeSet<Path>
+        get() = filePaths
 
     fun printFiles() {
-        for (f in filePaths) {
+        for (f in paths) {
             println(f.fileName.toString())
         }
         logger.info("test")
@@ -74,7 +72,7 @@ class PicFiles(private val basePathStr: String) : PicInterface {
 //                println("Skipping directory: ${path}")
             }
         }
-        logger.debug { "File walk complete, ${getCount()} files found" }
+        logger.debug { "File walk complete, $count files found" }
     }
 
     private fun filterImages(path: Path): Boolean {
@@ -200,8 +198,8 @@ class PicFiles(private val basePathStr: String) : PicInterface {
         }
         return dupeMD5s
     }
-// TODO pass filePaths as a param
 
+    // TODO pass filePaths as a param
     private fun getDupeSizes():
             ConcurrentHashMap<String, ConcurrentSkipListSet<String>> {
         val sizes = ConcurrentHashMap<String, String>()
@@ -285,7 +283,7 @@ fun main(args: Array<String>) {
     val filename = java.io.File("$dropbox/pic.db").absolutePath
     val pdb = PicDB(filename)
     transaction {
-        dbpaths = java.util.concurrent.ConcurrentSkipListSet(pdb.getPaths())
+        dbpaths = java.util.concurrent.ConcurrentSkipListSet(pdb.paths)
     }
     pics.filePaths.parallelStream().forEach {
         //        println("%s : %s ".format( kpics.getMD5(it),it.toString()))

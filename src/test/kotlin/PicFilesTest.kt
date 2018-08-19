@@ -70,7 +70,7 @@ internal class PicFilesTest {
         val f = getTestPics()
         Assertions.assertNotEquals(
                 0,
-                f.getCount(),
+                f.count,
                 "no testPicsPath found"
                                   )
     }
@@ -91,12 +91,6 @@ internal class PicFilesTest {
         getTestPics().getDupes().forEach {
             println(it)
         }
-    }
-
-    @Test
-    fun testTmpDupes() {
-        val pf = PicFiles("/tmp/dupes")
-        pf.getDupes().forEach { println(it)}
     }
 
     @Test
@@ -142,7 +136,7 @@ internal class PicFilesTest {
         org.junit.jupiter.api.Assumptions.assumeTrue(System.getProperty("os.name").startsWith("Windows"))
         val p = PicFiles("g:\\Dropbox\\Photos\\pics")
         println(p.getRelativePaths().first())
-        println(p.getBaseStr() + File.separator)
+        println(p.baseStr + File.separator)
     }
 
     @Test

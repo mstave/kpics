@@ -37,7 +37,7 @@ internal class PicDBTest {
         val localdbFile = java.io.File("$dropbox/pic.db").absolutePath
         val db = PicDB(localdbFile)
         print(db.relativePathSet?.observable())
-        print(db.getCount())
+        print(db.count)
         assertTrue(db.relativePathSet!!.size > 0)
 
     }
@@ -98,13 +98,13 @@ internal class PicDBTest {
 
     @Test
     fun testGetRel() {
-        val it: Path = getTestPics().getPaths().last()
+        val it: Path = getTestPics().paths.last()
         val localF = PicFiles("/Users/mstave/Dropbox/Photos/pics")
         val pathVal = Paths.get(
                 it.fileName.toString().replace(
-                        (localF.getBaseStr()), ""))
+                        (localF.baseStr), ""))
         println(pathVal)
-        println(getTestPics().getPaths().last())
+        println(getTestPics().paths.last())
     }
     @Test
     fun containsRelPathTest() {
@@ -163,7 +163,7 @@ internal class PicDBTest {
     @Test
     fun testPicDBCount() {
         val f = getTestPics()
-        Assertions.assertNotEquals(0, f.getCount())
+        Assertions.assertNotEquals(0, f.count)
     }
 
     @Test

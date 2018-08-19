@@ -14,9 +14,9 @@ import javafx.scene.image.Image
 import javafx.scene.layout.Priority
 import javafx.scene.layout.VBox
 import javafx.scene.paint.Color
+import kpics.AbstractPicCollection
 import kpics.PicDB
 import kpics.PicFiles
-import kpics.PicInterface
 import tornadofx.*
 import java.io.File
 import java.io.FileInputStream
@@ -65,9 +65,9 @@ class MainView : View("Pics") {
                     columnResizePolicy = SmartResize.POLICY
                     readonlyColumn("File", UberFile::filePath).prefWidth(320)
                     for (v in controller.allPicLibs) {
-                        readonlyColumn(v.getBaseStr()!!, UberFile::basePaths).minWidth(
+                        readonlyColumn(v.baseStr!!, UberFile::basePaths).minWidth(
                                 150.0).cellFormat { bPaths ->
-                            if (bPaths.contains(v.getBaseStr())) {
+                            if (bPaths.contains(v.baseStr)) {
                                 text = "present"
                                 style {
                                     textFill = Color.DARKGREEN
@@ -136,22 +136,22 @@ class DBForm : View() {
 
     init {
         pCont.allPicLibs.forEach { picL ->
-            log.info("Adding ${picL.getBaseStr()}")
+            log.info("Adding ${picL.baseStr}")
             when (picL) {
                 is PicDB    -> dbs.add(field {
-                    textfield { bind(picL.getBaseStr().toProperty()) }
+                    textfield { bind(picL.baseStr.toProperty()) }
                     button("remove") {
                         setOnAction {
                             org.controlsfx.control.Notifications.create()
                                     .title("Removing!")
-                                    .text("${picL.getBaseStr()}")
+                                    .text(picL.baseStr)
                                     .owner(this)
                                     .showInformation()
                         }
                     }
                 })
                 is PicFiles -> files.add(field {
-                    textfield { bind(picL.getBaseStr().toProperty()) }
+                    textfield { bind(picL.baseStr.toProperty()) }
                     button("remove")
                 })
                 else        -> {
@@ -195,7 +195,7 @@ class PicDBModel : JsonModel {
 
     override fun toJSON(json: JsonBuilder) {
         with(json) {
-            add("path", pdb?.getBaseStr())
+            add("path", pdb?.baseStr)
         }
     }
 }
@@ -214,7 +214,7 @@ class PicFileModel : JsonModel {
 
     override fun toJSON(json: JsonBuilder) {
         with(json) {
-            add("path", pf?.getBaseStr())
+            add("path", pf?.baseStr)
         }
     }
 }
@@ -223,7 +223,7 @@ class PicFileModel : JsonModel {
  * All the data manipulation heavy lifting
  */
 class PicsController : Controller() {
-    internal val allPicLibs = ArrayList<PicInterface>()
+    internal val allPicLibs = ArrayList<AbstractPicCollection>()
     val uberFileModel = UberFileModel()
     private var uberMap = ConcurrentHashMap<String, UberFile>()
     var diffs = ArrayList<UberFile>().observable()
@@ -234,7 +234,7 @@ class PicsController : Controller() {
         log.info("Loading")
         loadPicConfig()
         allPicLibs.parallelStream().forEach { p ->
-            log.info("Loading ${p.getBaseStr()}")
+            log.info("Loading ${p.baseStr}")
             p.relativePathSet?.forEach { pathVal ->
                 var pathValXPlatform = pathVal
                 if (File.separatorChar == '\\') {
@@ -242,9 +242,9 @@ class PicsController : Controller() {
                 }
                 val exist = uberMap.putIfAbsent(pathValXPlatform,
                                                 UberFile(pathValXPlatform,
-                                                         ConcurrentSkipListSet(setOf(p.getBaseStr()))))
+                                                         ConcurrentSkipListSet(setOf(p.baseStr))))
                 exist?.let {
-                    uberMap[pathValXPlatform]!!.basePaths.add(p.getBaseStr())
+                    uberMap[pathValXPlatform]!!.basePaths.add(p.baseStr)
                 }
             }
             diffs = ArrayList(uberMap.values).observable() // update table after each "column"
@@ -306,7 +306,7 @@ localdirs=["g\:\\\\Dropbox\\\\Photos\\\\pics"]
 }
 
 class PicsFragment : Fragment() {
-    val picObj: PicInterface by param()
+    val picObj: AbstractPicCollection by param()
     private val lview = listview<String> {
         prefWidth = 300.0
         minHeight = 600.0
@@ -314,8 +314,8 @@ class PicsFragment : Fragment() {
         selectionModel.select(0)
         vgrow = Priority.ALWAYS
     }
-    override val root = VBox(picObj.getBaseStr()?.let { label(it) }, lview,
-                             label("Count: " + picObj.getCount() + "\tName: " + picObj.toString())
+    override val root = VBox(picObj.baseStr?.let { label(it) }, lview,
+                             label("Count: " + picObj.count + "\tName: " + picObj.toString())
                             )
 }
 

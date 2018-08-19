@@ -43,8 +43,8 @@ class KPicsTest {
     fun testComboPaths() {
         val (pF, pDB) = getBothTestPics()
         transaction {
-            val fPaths: TreeSet<Path> = pF.getPaths()
-            val dPaths: TreeSet<Path> = pDB.getPaths()
+            val fPaths: TreeSet<Path> = pF.paths
+            val dPaths: TreeSet<Path> = pDB.paths
             val firstF = fPaths.first()
             val firstD = dPaths.first()
 

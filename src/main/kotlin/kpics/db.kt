@@ -119,16 +119,16 @@ open class LibFile(id: EntityID<Int>) : IntEntity(id), Comparable<LibFile> {
     }
 }
 
-class PicDB(internal val fName: String?) : PicInterface {
+class PicDB(internal val fName: String?) : AbstractPicCollection() {
     private var libFile = LibFile
     private val ds = SQLiteDataSource()
-    override fun getBaseStr() = fName
+    override val baseStr
+        get() = fName
     private var db: Database
 
     init {
         ds.url = "jdbc:sqlite:$fName"
-        if (!File(fName).isFile)
-            throw IllegalArgumentException("$fName doesn't exist")
+        require(File(fName).isFile)
         db = Database.connect(ds)
         TransactionManager.manager.defaultIsolationLevel = Connection.TRANSACTION_SERIALIZABLE
     }
@@ -140,13 +140,13 @@ class PicDB(internal val fName: String?) : PicInterface {
         }
     }
 
-    override fun getPaths(): TreeSet<Path> {
-        TransactionManager.manager.defaultIsolationLevel = Connection.TRANSACTION_SERIALIZABLE
-        return transaction(db) {
-            return@transaction TreeSet(getAll()?.map { it.toPath() })
+    override val paths: TreeSet<Path>
+        get() {
+            TransactionManager.manager.defaultIsolationLevel = Connection.TRANSACTION_SERIALIZABLE
+            return transaction(db) {
+                return@transaction TreeSet(getAll()?.map { it.toPath() })
+            }
         }
-    }
-
     override val relativePathSet: HashSet<String>?
         get() {
             TransactionManager.manager.defaultIsolationLevel = Connection.TRANSACTION_SERIALIZABLE
@@ -176,8 +176,8 @@ class PicDB(internal val fName: String?) : PicInterface {
     }
 
     fun contains(p: Path?): Boolean {
-        println(getPaths())
-        return getPaths().contains(p)
+        println(paths)
+        return paths.contains(p)
     }
 
     fun containsRelPath(relPath: Path): Boolean {
@@ -198,16 +198,15 @@ class PicDB(internal val fName: String?) : PicInterface {
         return count > 0
     }
 
-    override fun getCount(): Int {
-        var count = 0
-//        synchronized(this ) {
+    override val count: Int
+        get() = {
+            var count = 0
             TransactionManager.manager.defaultIsolationLevel = Connection.TRANSACTION_SERIALIZABLE
             xact {
                 count = libFile.all().count()
             }
-//        }
-        return count
-    }
+            count
+        }()
 
     fun xact(body: () -> Unit) {
         transaction(db) {
