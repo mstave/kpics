@@ -5,7 +5,6 @@ import mu.KotlinLogging
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import java.io.File
-import java.util.concurrent.ConcurrentSkipListSet
 
 internal class PicFilesTest {
     private val logger = KotlinLogging.logger {}
@@ -18,14 +17,10 @@ internal class PicFilesTest {
     }
 
     @Test
-    fun HashTest() {
-        val h = ConcurrentSkipListSet<String>()
-
-        println(h.size)
-        println(h.add("Foo"))
-        println(h.size)
-        println(h.add("Foo"))
-        println(h.size)
+    fun testDupes() {
+        val dupes = getTestPics().dupeFiles
+        Assertions.assertNotNull(dupes)
+        Assertions.assertEquals(1920, dupes!!.size)
     }
 
     @Test
@@ -54,8 +49,8 @@ internal class PicFilesTest {
 //        val testPicsPathStr = "/Users/mstave/Dropbox/Photos/pics/"
         val pics = PicFiles(testPicsPathStr)
         val dupe = pics.getDupes()
-        println(dupe.size)
-        Assertions.assertTrue(dupe.size > 0)
+        Assertions.assertNotNull(dupe)
+        Assertions.assertTrue(dupe!!.size > 0)
     }
 
     @Test
@@ -81,14 +76,17 @@ internal class PicFilesTest {
         val d1 = async { pf.getDupes() }
         val d2 = async { pf.getDupes() }
         runBlocking {
-            println(d1.await().size)
-            println(d2.await().size)
+            println(d1.await()?.size)
+            println(d2.await()?.size)
+            Assertions.assertNotNull(d1)
+            Assertions.assertNotNull(d2)
+            Assertions.assertTrue(d1.await()?.size!! > 0)
         }
     }
 
     @Test
     fun testForEachDupe() {
-        getTestPics().getDupes().forEach {
+        getTestPics().getDupes()?.forEach {
             println(it)
         }
     }
@@ -109,11 +107,6 @@ internal class PicFilesTest {
     fun testGetDirStats() {
         val res = getTestPics().getDirStats()
         println(res.toString())
-        res.forEach {
-            if (it.value.first == it.value.second) {
-                println(it.key)
-            }
-        }
     }
 
     @Test
@@ -124,8 +117,8 @@ internal class PicFilesTest {
         }
     }
 
-    @Test
-    fun testGetDirAllDupes() {
+    //    @Test
+    fun printDupesByDir() {
         getTestPics().getDirStats().forEach {
             println(it)
         }
@@ -140,10 +133,19 @@ internal class PicFilesTest {
     }
 
     @Test
+    fun testRelativePath() {
+        val f = getTestPics()
+        Assertions.assertNotNull(f.relativePaths)
+        val firstName: String = f.relativePaths.last()!!
+        Assertions.assertFalse(firstName.contains(f.baseStr))
+
+    }
+    @Test
     fun testGetFullPath() {
         val f = getTestPics()
-//        print(f.getFullPath("DSC00665.ARW"))
-        val firstName = f.getRelativePaths().last()
+        val firstName: String = f.relativePaths.last()!!
+        println("${f.baseStr}${File.separator})")
+
         println(firstName)
         val ffile = File(f.getFullPath(firstName))
         print(ffile.isFile)

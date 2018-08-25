@@ -6,17 +6,13 @@ import org.jetbrains.exposed.dao.IntEntityClass
 import org.jetbrains.exposed.dao.IntIdTable
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.Slf4jSqlLogger
-import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.transactions.TransactionManager
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.sqlite.SQLiteDataSource
-import java.io.File
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.sql.Connection
-import java.util.*
-import kotlin.collections.ArrayList
 
 const val query = """
     SELECT afile.ID_local,
@@ -116,102 +112,6 @@ open class LibFile(id: EntityID<Int>) : IntEntity(id), Comparable<LibFile> {
     override fun toString(): String {
         return "$folder$baseName.$extension"
 //        return "$folder$baseName.$extension @ ${modDateTime}"
-    }
-}
-
-class PicDB(internal val fName: String?) : AbstractPicCollection() {
-    private var libFile = LibFile
-    private val ds = SQLiteDataSource()
-    override val baseStr
-        get() = fName
-    private var db: Database
-
-    init {
-        ds.url = "jdbc:sqlite:$fName"
-        require(File(fName).isFile)
-        db = Database.connect(ds)
-        TransactionManager.manager.defaultIsolationLevel = Connection.TRANSACTION_SERIALIZABLE
-    }
-
-    fun getAll(): ArrayList<LibFile>? {
-        TransactionManager.manager.defaultIsolationLevel = Connection.TRANSACTION_SERIALIZABLE
-        return transaction(db) {
-            return@transaction ArrayList(libFile.all().toList())
-        }
-    }
-
-    override val paths: TreeSet<Path>
-        get() {
-            TransactionManager.manager.defaultIsolationLevel = Connection.TRANSACTION_SERIALIZABLE
-            return transaction(db) {
-                return@transaction TreeSet(getAll()?.map { it.toPath() })
-            }
-        }
-    override val relativePathSet: HashSet<String>?
-        get() {
-            TransactionManager.manager.defaultIsolationLevel = Connection.TRANSACTION_SERIALIZABLE
-            return transaction(db) {
-                return@transaction HashSet(getAll()?.map { it.toPathFromRoot() }?.toSet())
-            }
-        }
-
-    fun containsName(fName: String): Boolean {
-        val full = getFullPath(fName)
-        return full != null
-    }
-
-    override fun getFullPath(relPath: String): String? {
-        TransactionManager.manager.defaultIsolationLevel = Connection.TRANSACTION_SERIALIZABLE
-        var fPath: String? = null
-        xact {
-            val findRes = libFile.find {
-                (AgLibraryFile.baseName eq (relPath.split(".")[0])) and
-                        (AgLibraryFile.extension eq relPath.split(".")[1])
-            }
-            if (!findRes.empty()) {
-                fPath = findRes.first().toString()
-            }
-        }
-        return fPath
-    }
-
-    fun contains(p: Path?): Boolean {
-        println(paths)
-        return paths.contains(p)
-    }
-
-    fun containsRelPath(relPath: Path): Boolean {
-        var count = 0
-        TransactionManager.manager.defaultIsolationLevel = Connection.TRANSACTION_SERIALIZABLE
-        xact {
-            var extension = ""
-            val i = relPath.fileName.toString().lastIndexOf('.')
-            if (i >= 0) {
-                extension = relPath.fileName.toString().substring(i + 1)
-            }
-            val baseName = relPath.fileName.toString().substring(0, i)
-            count = libFile.find {
-                (AgLibraryFile.baseName eq baseName) and
-                        (AgLibraryFile.extension eq extension)
-            }.count()
-        }
-        return count > 0
-    }
-
-    override val count: Int
-        get() = {
-            var count = 0
-            TransactionManager.manager.defaultIsolationLevel = Connection.TRANSACTION_SERIALIZABLE
-            xact {
-                count = libFile.all().count()
-            }
-            count
-        }()
-
-    fun xact(body: () -> Unit) {
-        transaction(db) {
-            body()
-        }
     }
 }
 

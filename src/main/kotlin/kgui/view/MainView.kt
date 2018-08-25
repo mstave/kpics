@@ -235,14 +235,16 @@ class PicsController : Controller() {
         loadPicConfig()
         allPicLibs.parallelStream().forEach { p ->
             log.info("Loading ${p.baseStr}")
-            p.relativePathSet?.forEach { pathVal ->
+            p.relativePaths.forEach { pathVal ->
                 var pathValXPlatform = pathVal
                 if (File.separatorChar == '\\') {
-                    pathValXPlatform = pathVal.replace(File.separatorChar, '/')
+                    pathValXPlatform = pathVal?.replace(File.separatorChar, '/')
                 }
-                val exist = uberMap.putIfAbsent(pathValXPlatform,
-                                                UberFile(pathValXPlatform,
-                                                         ConcurrentSkipListSet(setOf(p.baseStr))))
+                val exist = pathValXPlatform?.let {
+                    uberMap.putIfAbsent(it,
+                                        UberFile(pathValXPlatform,
+                                                 ConcurrentSkipListSet(setOf(p.baseStr))))
+                }
                 exist?.let {
                     uberMap[pathValXPlatform]!!.basePaths.add(p.baseStr)
                 }
@@ -310,7 +312,7 @@ class PicsFragment : Fragment() {
     private val lview = listview<String> {
         prefWidth = 300.0
         minHeight = 600.0
-        items = picObj.relativePathSet!!.toList().observable()
+        items = picObj.relativePaths.toList().observable()
         selectionModel.select(0)
         vgrow = Priority.ALWAYS
     }
@@ -344,6 +346,7 @@ class ExifController : ItemViewModel<ExifGroup>() {
             if (listProp.size > 0)
                 listProp.clear()
             val data = ImageMetadataReader.readMetadata(File(pathProp.get()))
+            // TODO replace with something like fold
             data.directories.forEach { dir ->
                 val child = ArrayList<ExifGroup>()
                 dir.tags.stream().forEach {
