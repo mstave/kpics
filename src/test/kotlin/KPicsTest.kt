@@ -16,6 +16,7 @@ class KPicsTest {
     companion object {
         fun getBothTestPics(): Pair<PicFiles, PicDB> {
             return Pair(PicFilesTest.getTestPics(), PicDBTest.getTestPics())
+
         }
 
         fun getMD5(path: Path): String {
@@ -27,16 +28,6 @@ class KPicsTest {
             }
             return result
         }
-    }
-
-    //    @Test
-//    fun testComboCount() {
-//        val (pF, pDB) = getBothTestPics()
-//        Assertions.assertEquals(pF.getCount(), pDB.getCount())
-//
-//    }
-    @Test
-    fun testMD5() {
     }
 
     @Test

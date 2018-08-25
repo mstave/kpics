@@ -10,9 +10,10 @@ internal class PicFilesTest {
     private val logger = KotlinLogging.logger {}
 
     companion object {
-        const val testPicsPath = "/Users/mstave/Dropbox/Photos/pics/"
+        //        const val testPicsPath = "/Users/mstave/Dropbox/Photos/pics/"
+        fun getTestPicsPath() = "testdata/pics"
         fun getTestPics(): PicFiles {
-            return PicFiles(testPicsPath)
+            return PicFiles(getTestPicsPath())
         }
     }
 
@@ -20,7 +21,7 @@ internal class PicFilesTest {
     fun testDupes() {
         val dupes = getTestPics().dupeFiles
         Assertions.assertNotNull(dupes)
-        Assertions.assertEquals(1920, dupes!!.size)
+        Assertions.assertEquals(2, dupes!!.size)
     }
 
     @Test
@@ -47,7 +48,7 @@ internal class PicFilesTest {
     fun testMD5sUnique() {
         val testPicsPathStr = "/Users/mstave/Dropbox/Photos/pics/"
 //        val testPicsPathStr = "/Users/mstave/Dropbox/Photos/pics/"
-        val pics = PicFiles(testPicsPathStr)
+        val pics = getTestPics()
         val dupe = pics.getDupes()
         Assertions.assertNotNull(dupe)
         Assertions.assertTrue(dupe!!.size > 0)

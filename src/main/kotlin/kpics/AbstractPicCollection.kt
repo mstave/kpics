@@ -14,7 +14,6 @@ abstract class AbstractPicCollection {
             path.toString().replace(
                     it, "")
         }
-//        (this.baseStr + "/"), "")
         pathVal1 = pathVal1?.replace((this.baseStr + ":/"), "")  // windows
         return pathVal1
     }
@@ -27,8 +26,8 @@ abstract class AbstractPicCollection {
 }
 
 fun makePicInterface(dbOrDir: String): AbstractPicCollection = when {
-        File(dbOrDir).isDirectory ->
-            PicFiles(dbOrDir)
-        else                      ->
-            PicDB(dbOrDir)
-    }
+    File(dbOrDir).isDirectory ->
+        PicFiles(dbOrDir)
+    else                      ->
+        PicDB(dbOrDir)
+}
