@@ -92,10 +92,6 @@ internal class PicDBTest {
         }
     }
 
-    fun goal() {
-
-    }
-
     @Test
     fun testGetRel() {
         val it: Path = getTestPics().paths.last()

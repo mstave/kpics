@@ -9,8 +9,10 @@ abstract class AbstractPicCollection {
     abstract val paths: TreeSet<Path>
     abstract val baseStr: String?
     abstract val relativePaths: TreeSet<String?>
+    abstract fun getFullPath(relPath: String): String?
+
     fun toRelativePathStr(path: Path): String? {
-        var pathVal1: String? = this.baseStr?.let {
+        var pathVal1 = this.baseStr?.let {
             path.toString().replace(
                     it, "")
         }
@@ -18,11 +20,7 @@ abstract class AbstractPicCollection {
         return pathVal1
     }
 
-    abstract fun getFullPath(relPath: String): String?
-    fun containsName(fName: String): Boolean {
-        val full = getFullPath(fName)
-        return full != null
-    }
+    fun containsName(fName: String): Boolean = getFullPath(fName) != null
 }
 
 fun makePicInterface(dbOrDir: String): AbstractPicCollection = when {

@@ -2,7 +2,7 @@ import kotlinx.coroutines.experimental.async
 import kotlinx.coroutines.experimental.runBlocking
 import kpics.PicFiles
 import mu.KotlinLogging
-import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import java.io.File
 
@@ -11,24 +11,35 @@ internal class PicFilesTest {
 
     companion object {
         //        const val testPicsPath = "/Users/mstave/Dropbox/Photos/pics/"
-        fun getTestPicsPath() = "testdata/pics"
+        private val testPicsPath = System.getProperty("user.dir") +
+                                   File.separator + "testdata/pics"
+
         fun getTestPics(): PicFiles {
-            return PicFiles(getTestPicsPath())
+            return PicFiles(testPicsPath)
         }
+    }
+
+    @Test
+    fun testGetDirsWithAllDupes() {
+        val test = getTestPics().getDirsWithAllDupes()
+
+        assertNotNull(test)
+        assertEquals(1, test.size)
+        assertEquals("${testPicsPath + File.separator}rootdupe", test[0])
     }
 
     @Test
     fun testDupes() {
         val dupes = getTestPics().dupeFiles
-        Assertions.assertNotNull(dupes)
-        Assertions.assertEquals(2, dupes!!.size)
+        assertNotNull(dupes)
+        assertEquals(2, dupes!!.size)
     }
 
     @Test
     fun testGetProviders() {
         java.security.Security.getProviders().forEach {
             println(it.name)
-            it.services.forEach() { ser ->
+            it.services.forEach { ser ->
                 println("\t " + ser.algorithm)
             }
         }
@@ -50,8 +61,8 @@ internal class PicFilesTest {
 //        val testPicsPathStr = "/Users/mstave/Dropbox/Photos/pics/"
         val pics = getTestPics()
         val dupe = pics.getDupes()
-        Assertions.assertNotNull(dupe)
-        Assertions.assertTrue(dupe!!.size > 0)
+        assertNotNull(dupe)
+        assertTrue(dupe!!.size > 0)
     }
 
     @Test
@@ -64,11 +75,11 @@ internal class PicFilesTest {
     @Test
     fun testGetCount() {
         val f = getTestPics()
-        Assertions.assertNotEquals(
+        assertNotEquals(
                 0,
                 f.count,
                 "no testPicsPath found"
-                                  )
+                       )
     }
 
     @Test
@@ -79,9 +90,9 @@ internal class PicFilesTest {
         runBlocking {
             println(d1.await()?.size)
             println(d2.await()?.size)
-            Assertions.assertNotNull(d1)
-            Assertions.assertNotNull(d2)
-            Assertions.assertTrue(d1.await()?.size!! > 0)
+            assertNotNull(d1)
+            assertNotNull(d2)
+            assertTrue(d1.await()?.size!! > 0)
         }
     }
 
@@ -136,19 +147,20 @@ internal class PicFilesTest {
     @Test
     fun testRelativePath() {
         val f = getTestPics()
-        Assertions.assertNotNull(f.relativePaths)
+        assertNotNull(f.relativePaths)
         val firstName: String = f.relativePaths.last()!!
-        Assertions.assertFalse(firstName.contains(f.baseStr))
-
+        assertFalse(firstName.contains(f.baseStr))
     }
+
     @Test
     fun testGetFullPath() {
         val f = getTestPics()
         val firstName: String = f.relativePaths.last()!!
-        println("${f.baseStr}${File.separator})")
-
-        println(firstName)
+        val full = f.getFullPath(firstName)
+        assertEquals(f.baseStr + firstName, full)
         val ffile = File(f.getFullPath(firstName))
-        print(ffile.isFile)
+        assertTrue(ffile.isFile)
+        val neg = f.getFullPath("BOGUS")
+        assertEquals("", neg)
     }
 }

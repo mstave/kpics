@@ -107,7 +107,7 @@ class PicFiles(private val basePathStr: String) : AbstractPicCollection() {
 
     fun getDirStats(): DirDupeStats { // path: totalFileCount, dupeFileCount
         val dupes = getDupes()
-        var result = HashMap<String, Pair<Int, Int>>()
+        val result = HashMap<String, Pair<Int, Int>>()
         filePaths.forEach { path ->
             result[path.parent.toString()] =
                     result[path.parent.toString()]?.let { Pair(it.first + 1, 0) } ?: Pair(1, 0)
@@ -129,7 +129,7 @@ class PicFiles(private val basePathStr: String) : AbstractPicCollection() {
     }
 
     fun getDupesForFile(fName: String): ArrayList<String> {
-        var result = ArrayList<String>()
+        val result = ArrayList<String>()
         val dupes = getDupes()
         dupes?.forEach { dupeList ->
             if (dupeList.contains(fName)) {
@@ -142,7 +142,7 @@ class PicFiles(private val basePathStr: String) : AbstractPicCollection() {
     }
 
     fun getDupesForDir(dir: String): ArrayList<String> {
-        var result = ArrayList<String>()
+        val result = ArrayList<String>()
         val dupes = getDupes()?.flatten()
         val files = File(dir).listFiles()
         files.forEach {
@@ -161,7 +161,7 @@ class PicFiles(private val basePathStr: String) : AbstractPicCollection() {
     }
 
     fun getDirsWithAllDupes(): ArrayList<String> {
-        var retval = ArrayList<String>()
+        val retval = ArrayList<String>()
         val res = getDirStats()
         res.forEach {
             if (it.value.first == it.value.second) {
@@ -173,7 +173,6 @@ class PicFiles(private val basePathStr: String) : AbstractPicCollection() {
 
     @Synchronized
     fun getDupes(): HashSet<HashSet<String>>? {
-        println("getDupes called")
         // memoize, since this may be an expensive operation
         if (dupesChecked)
             return _dupeFiles
@@ -184,7 +183,6 @@ class PicFiles(private val basePathStr: String) : AbstractPicCollection() {
         }
         logger.debug("After second pass: ${dupeSizes.size}")
         dupesChecked = true
-        println("getdupes returning")
         return _dupeFiles
     }
 
@@ -232,9 +230,9 @@ class PicFiles(private val basePathStr: String) : AbstractPicCollection() {
     }
 
     fun getDupeFileList(): ArrayList<String> {
-        var ret = ArrayList<String>()
+        val ret = ArrayList<String>()
         getDupes()?.flatten()?.forEach {
-            ret.add("${it} : ${getDupesForFile(it)}")
+            ret.add("$it : ${getDupesForFile(it)}")
         }
         ret.sort()
         return ret

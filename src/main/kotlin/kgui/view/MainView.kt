@@ -265,8 +265,8 @@ localdirs=["g\:\\\\Dropbox\\\\Photos\\\\pics"]
             println("Create conf/[hostname]/app.properties with contents like")
             println(ex)
         }
-        picdbs?.let {
-            for (dbPath in it) {
+        picdbs?.let { jsonArray ->
+            for (dbPath in jsonArray) {
                 dbPath.asJsonObject().toModel<PicDBModel>().pdb?.let { allPicLibs.add(it) }
             }
         }

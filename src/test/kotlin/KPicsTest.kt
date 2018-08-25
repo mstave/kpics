@@ -6,6 +6,7 @@ import kpics.PicFiles
 import kpics.makePicInterface
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import tornadofx.*
 import java.io.File
@@ -29,9 +30,12 @@ class KPicsTest {
             return result
         }
     }
-
+    // TODO re-enable after adding sample db
+    @Disabled
     @Test
+
     fun testComboPaths() {
+
         val (pF, pDB) = getBothTestPics()
         transaction {
             val fPaths: TreeSet<Path> = pF.paths
@@ -49,7 +53,6 @@ class KPicsTest {
             for (f in fPaths) {
                 if (!dPaths.contains(f)) {
                     missingCount++
-                    println(f)
                 } else matchedCount++
             }
 
@@ -59,7 +62,6 @@ class KPicsTest {
             for (f in dPaths) {
                 if (!fPaths.contains(f)) {
                     missingCount++
-                    println(f)
                 } else matchedCount++
             }
             println("db -> files : $missingCount missing, $matchedCount matched")
@@ -69,14 +71,6 @@ class KPicsTest {
 //                    dPaths
 //            )
         }
-    }
-
-    @Test
-    fun getBaseName() {
-    }
-
-    @Test
-    fun toPathFromRoot() {
     }
 
     @Test
@@ -91,15 +85,13 @@ class KPicsTest {
 
     @Test
     fun testMakePicInterfaceFile() {
-        val f = makePicInterface("/Users/mstave/Dropbox/Photos/pics/2017")
-        println(f.javaClass)
+        val f = makePicInterface(PicFilesTest.getTestPics().baseStr)
         Assertions.assertEquals(f.javaClass, PicFiles::class.java)
     }
 
     @Test
     fun testMakePicInterfaceDB() {
         val f = makePicInterface("/Users/mstave/Dropbox/pic.db")
-        println(f.javaClass)
         Assertions.assertEquals(f.javaClass, PicDB::class.java)
     }
 
