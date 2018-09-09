@@ -97,13 +97,21 @@ class KPicsTest {
 
     @Test
     fun testMakePicInterfaceDB() {
-        val f = makePicInterface("/Users/mstave/Dropbox/pic.db")
+        val dbPath = "/Users/mstave/Dropbox/pic.db"
+        val ff = File(dbPath)
+        org.junit.jupiter.api.Assumptions.assumeTrue {
+            ff.exists()
+        }
+        val f = makePicInterface("")
         Assertions.assertEquals(f.javaClass, LightroomDB::class.java)
     }
 
     @Test
     fun testMeta() {
-        val imgPath = "/Users/mstave/Dropbox/Photos/pics/Holly/HollyCat.JPG"
+        val imgPath = LocalPicFilesTest.getTestPics().basePath.toString() +  File.separator + "312.png"
+
+
+//        val imgPath = "/Users/mstave/Dropbox/Photos/pics/Holly/HollyCat.JPG"
 //        val imgPath = "/Users/mstave/Dropbox/Photos/pics/HollyJTea.jpg"
         val item = ImageMetadataReader.readMetadata(File(imgPath))
         item.directories.forEach { dir ->

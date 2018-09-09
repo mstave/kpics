@@ -12,7 +12,7 @@ internal class LocalPicFilesTest {
     companion object {
         //        const val testPicsPath = "/Users/mstave/Dropbox/Photos/pics/"
         private val testPicsPath = System.getProperty("user.dir") +
-                                   File.separator + "testdata/pics"
+                                   File.separator + "testdata" + File.separator + "pics"
 
         fun getTestPics(): LocalPicFiles {
             return LocalPicFiles(testPicsPath)
@@ -139,8 +139,19 @@ internal class LocalPicFilesTest {
     @Test
     fun testWin() {
         org.junit.jupiter.api.Assumptions.assumeTrue(System.getProperty("os.name").startsWith("Windows"))
-        val p = LocalPicFiles("g:\\Dropbox\\Photos\\pics")
+        var p = LocalPicFiles("g:\\Dropbox\\Photos\\pics")
+        var path1 = System.getProperty("user.dir") + File.separator + "testdata" + File.separator + "pics"
+//        var path1 = System.getProperty("user.dir") + File.separator + "testdata/pics"
+        println("???")
+        println(path1)
+        p = LocalPicFiles(path1)
+//        p = LocalPicFiles(
+//        p = getTestPics()
         println(p.getRelativePaths().first())
+        println(p.getRelativePaths().last())
+        println(p.relativePaths.first())
+        println(p.relativePaths.last())
+        println(p.relativePaths.shuffled().first())
         println(p.baseStr + File.separator)
     }
 
