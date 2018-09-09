@@ -18,8 +18,18 @@ internal class LightroomDBTest {
 
     companion object {
         const val testPicsPath = "/Users/mstave/Dropbox/Photos/testPicsPath/"
+        val dropbox : String
+        get() {
+            var guess = "/Users/mstave/Dropbox"
+            if (!File(guess).exists()) {
+                guess = "/mnt/g/Dropbox"
+            }
+            if (!File(guess).exists()) {
+                guess = "g:\\Dropbox"
+            }
+            return guess
+        }
         fun getTestPics(): LightroomDB {
-            val dropbox = "/Users/mstave/Dropbox"
             val filename = java.io.File("$dropbox/pic.db").absolutePath
             return LightroomDB(filename)
         }
@@ -39,7 +49,6 @@ internal class LightroomDBTest {
 
     @Test
     fun testlocDBRel() {
-        val dropbox = "/Users/mstave/Dropbox"
         val localdbFile = java.io.File("$dropbox/pic.db").absolutePath
         val db = LightroomDB(localdbFile)
         print(db.relativePaths.observable())
@@ -101,7 +110,7 @@ internal class LightroomDBTest {
     @Test
     fun testGetRel() {
         val it: Path = getTestPics().paths.last()
-        val localF = LocalPicFiles("/Users/mstave/Dropbox/Photos/pics")
+        val localF = LocalPicFiles("$dropbox/Photos/pics")
         val pathVal = Paths.get(
                 it.fileName.toString().replace(
                         (localF.baseStr), ""))
@@ -118,7 +127,7 @@ internal class LightroomDBTest {
     @Test
     fun testchecksum() {
 //        org.junit.jupiter.api.fail ("implement me")
-        org.junit.jupiter.api.Assumptions.assumeTrue(false)
+//        org.junit.jupiter.api.Assumptions.assumeTrue(false)
     }
     @Test
     fun pathTest() {
