@@ -25,9 +25,9 @@ import javax.json.JsonObject
 class MainView : View("Pics") {
     private val controller: PicsController by inject()
     override val root = tabpane()
-    val exif: ExifView by inject()
-    val imgPath = SimpleStringProperty()
-    val dupes: DupeView by inject()
+    private val exif: ExifView by inject()
+    private val imgPath = SimpleStringProperty()
+    private val dupes: DupeView by inject()
 
     init {
         with(root) {
@@ -116,8 +116,8 @@ class MainView : View("Pics") {
 class DBForm : View() {
     val pCont: PicsController by param()
     override val root = form()
-    var dbs = fieldset("Lightroom database files")
-    var files = fieldset("Directories with image files")
+    private var dbs = fieldset("Lightroom database files")
+    private var files = fieldset("Directories with image files")
 
     init {
         pCont.allPicLibs.forEach { picL ->
@@ -212,7 +212,7 @@ class PicsController : Controller() {
     val uberFileModel = UberFileModel()
     private var uberMap = ConcurrentHashMap<String, UberFile>()
     var diffs = ArrayList<UberFile>().observable()
-    val picdbs = app.config.jsonArray("lightroomDbs")
+    private val picdbs = app.config.jsonArray("lightroomDbs")
     val picFiles = app.config.jsonArray("localDirs")
 
     init {
@@ -309,7 +309,7 @@ class PicsFragment : Fragment() {
 class DupeView : View() {
     override val root = scrollpane(true, true)
     private val dupeC: DupeController by inject()
-    var msg = text("Searching for duplicates, this may take a few minutes...")
+    private var msg = text("Searching for duplicates, this may take a few minutes...")
 
     init {
         with(root) {
@@ -330,11 +330,11 @@ class DupeView : View() {
 
 class DupeController : Controller() {
     private val picsCont: PicsController by inject()
-    val dupesProperty = SimpleObjectProperty<HashSet<HashSet<String>>>()
-    var dupes by dupesProperty
+    private val dupesProperty = SimpleObjectProperty<HashSet<HashSet<String>>>()
+    private var dupes by dupesProperty
     var doneSearching = SimpleBooleanProperty(false)
     var dupeStrings = ArrayList<String>().observable()
-    var pf: LocalPicFiles? = null
+    private var pf: LocalPicFiles? = null
 
     init {
         runAsync {
@@ -343,7 +343,7 @@ class DupeController : Controller() {
                 dupes = it.getDupes()
             }
             doneSearching.set(true)
-        } ui {
+        } ui { _ ->
             pf?.let {
                 dupeStrings.addAll(it.getDupeFileList())
             }

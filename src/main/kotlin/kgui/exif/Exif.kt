@@ -25,9 +25,9 @@ class ExifViewModel(imgPath: String) : ItemViewModel<ExifGroup>() {
 class ExifController : ItemViewModel<ExifGroup>() {
     //class ExifController(val imgFilePath : String) : Controller() {
     var pathProp = SimpleStringProperty()
-    val fixedProp = SimpleStringProperty("start")
+    private val fixedProp = SimpleStringProperty("start")
     var listProp = SimpleListProperty(ArrayList<ExifGroup>().observable())
-    fun updateList() {
+    private fun updateList() {
         println(pathProp)
         if (pathProp.value != null && File(pathProp.get()).isFile) {
             if (listProp.size > 0)

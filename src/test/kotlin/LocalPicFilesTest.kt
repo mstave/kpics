@@ -140,7 +140,7 @@ internal class LocalPicFilesTest {
     fun testWin() {
         org.junit.jupiter.api.Assumptions.assumeTrue(System.getProperty("os.name").startsWith("Windows"))
         var p = LocalPicFiles("g:\\Dropbox\\Photos\\pics")
-        var path1 = System.getProperty("user.dir") + File.separator + "testdata" + File.separator + "pics"
+        val path1 = System.getProperty("user.dir") + File.separator + "testdata" + File.separator + "pics"
 //        var path1 = System.getProperty("user.dir") + File.separator + "testdata/pics"
         println("???")
         println(path1)

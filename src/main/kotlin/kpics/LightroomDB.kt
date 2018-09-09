@@ -143,7 +143,7 @@ class LightroomDB(private val fName: String?) : AbstractPicCollection() {
         companion object : IntEntityClass<LibFolder>(AgLibraryFolder)
 
         val path by LibFile referrersOn AgLibraryFile.folder
-        var rootFolder by LibRootFolder referencedOn AgLibraryFolder.rootFolder
+        private var rootFolder by LibRootFolder referencedOn AgLibraryFolder.rootFolder
         var pathFromRoot by AgLibraryFolder.pathFromRoot
         override fun toString(): String {
             //return rootFolder.toString()
@@ -154,7 +154,7 @@ class LightroomDB(private val fName: String?) : AbstractPicCollection() {
     class LibRootFolder(id: EntityID<Int>) : IntEntity(id) {
         companion object : IntEntityClass<LibRootFolder>(AgLibraryRootFolder)
 
-        var absolutePath by AgLibraryRootFolder.absolutePath
+        private var absolutePath by AgLibraryRootFolder.absolutePath
         val rootFolder by LibFolder referrersOn AgLibraryFolder.rootFolder
         override fun toString(): String {
             return absolutePath
@@ -164,17 +164,17 @@ class LightroomDB(private val fName: String?) : AbstractPicCollection() {
     open class LibFile(id: EntityID<Int>) : IntEntity(id), Comparable<LibFile> {
         companion object : IntEntityClass<LibFile>(AgLibraryFile)
 
-        var folder by LibFolder referencedOn AgLibraryFile.folder
+        private var folder by LibFolder referencedOn AgLibraryFile.folder
         var baseName by AgLibraryFile.baseName
         var extension by AgLibraryFile.extension
-        var modTime by AgLibraryFile.modTime
-        var externalModTime by AgLibraryFile.externalModTime
+        private var modTime by AgLibraryFile.modTime
+        private var externalModTime by AgLibraryFile.externalModTime
         val modDateTime: java.util.Date
             get() = fromCrazyAppleDate(modTime)
         val externalModDateTime: java.util.Date
             get() = fromCrazyAppleDate(externalModTime)
 
-        fun fromCrazyAppleDate(crazy: Long): java.util.Date {
+        private fun fromCrazyAppleDate(crazy: Long): java.util.Date {
             val crazyAppleDataConstant = 978307200L
             return java.util.Date(1000 * (crazy + crazyAppleDataConstant))
         }

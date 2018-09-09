@@ -151,7 +151,7 @@ class LocalPicFiles(private val basePathStr: String) : AbstractPicCollection() {
         val result = ArrayList<String>()
         val dupes = getDupes()?.flatten()
         val files = File(dir).listFiles()
-        files.forEach {
+        files.forEach { it ->
             if (it.isFile) {
                 dupes?.let {
                     if (it.contains(it.toString())) {
