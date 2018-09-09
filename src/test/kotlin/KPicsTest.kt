@@ -102,7 +102,7 @@ class KPicsTest {
         org.junit.jupiter.api.Assumptions.assumeTrue {
             ff.exists()
         }
-        val f = makePicInterface("")
+        val f = makePicInterface(dbPath)
         Assertions.assertEquals(f.javaClass, LightroomDB::class.java)
     }
 
