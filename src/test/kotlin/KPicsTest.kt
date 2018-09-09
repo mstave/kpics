@@ -84,6 +84,12 @@ class KPicsTest {
     }
 
     @Test
+    fun testBaseStr() {
+        Assertions.assertTrue(LocalPicFilesTest.getTestPics().baseStr.endsWith(File.separator))
+
+    }
+
+    @Test
     fun testMakePicInterfaceFile() {
         val f = makePicInterface(LocalPicFilesTest.getTestPics().baseStr)
         Assertions.assertEquals(f.javaClass, LocalPicFiles::class.java)

@@ -25,11 +25,16 @@ internal class LightroomDBTest {
         }
     }
 
+    // TODO replace weak-ass println tests with asserts with testdata
     @Test
     fun relPaths() {
         val db = getTestPics()
-        print(db.relativePaths)
+        print(db.relativePaths.first())
 
+    }
+    @Test
+    fun basePathStr() {
+        println(getTestPics().baseStr)
     }
 
     @Test

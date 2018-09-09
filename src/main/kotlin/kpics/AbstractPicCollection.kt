@@ -12,12 +12,16 @@ abstract class AbstractPicCollection {
     abstract fun getFullPath(relPath: String): String?
 
     fun toRelativePathStr(path: Path): String? {
-        var pathVal1 = this.baseStr?.let {
-            path.toString().replace(
-                    it, "")
+        this.baseStr?.let { bstr ->
+            var pathMinusBase = path.toString().replaceFirst(bstr, "")
+            // TODO test windows
+            // pathMinusBase = pathMinusBase.replace(("""$bstr:"""), "")
+            if (pathMinusBase.startsWith("/", 0)) {
+                pathMinusBase = pathMinusBase.replaceFirst("/", "")
+            }
+            return pathMinusBase
         }
-        pathVal1 = pathVal1?.replace((this.baseStr + ":/"), "")  // windows
-        return pathVal1
+        return null
     }
 
     fun containsName(fName: String): Boolean = getFullPath(fName) != null

@@ -225,17 +225,17 @@ class PicsController : Controller() {
                 if (File.separatorChar == '\\') {
                     pathValXPlatform = pathVal?.replace(File.separatorChar, '/')
                 }
-                val exist = pathValXPlatform?.let {
-                    uberMap.putIfAbsent(it,
-                                        UberFile(pathValXPlatform,
-                                                 ConcurrentSkipListSet(setOf(p.baseStr))))
-                }
-                exist?.let {
-                    uberMap[pathValXPlatform]!!.basePaths.add(p.baseStr)
+                    val exist = pathValXPlatform?.let {
+                        uberMap.putIfAbsent(it,
+                                            UberFile(pathValXPlatform,
+                                                     ConcurrentSkipListSet(setOf(p.baseStr))))
+                    }
+                    exist?.let {
+                        uberMap[pathValXPlatform]!!.basePaths.add(p.baseStr)
                 }
             }
-            diffs = ArrayList(uberMap.values).observable() // update table after each "column"
         }
+        diffs = ArrayList(uberMap.values).observable() // update table after each "column"
     }
 
     private fun loadPicConfig() {

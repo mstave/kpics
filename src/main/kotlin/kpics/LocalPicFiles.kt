@@ -28,8 +28,14 @@ class LocalPicFiles(private val basePathStr: String) : AbstractPicCollection() {
     var filePaths: TreeSet<Path> = TreeSet()
     override val count: Int
         get() = filePaths.size
-    override val baseStr
-        get() = basePathStr
+    override val baseStr : String
+        get() {
+            return if (basePathStr.endsWith((File.separator))) {
+                basePathStr
+            } else {
+                basePathStr + File.separator
+            }
+        }
     override val relativePaths: TreeSet<String?>
         get() {
             return TreeSet((paths.map {
@@ -38,6 +44,7 @@ class LocalPicFiles(private val basePathStr: String) : AbstractPicCollection() {
 //                        basePathStr + File.separator)
             }).toSet())
         }
+// TODO getRelativePaths is redundant with getter, right?
 
     fun getRelativePaths(): ArrayList<String> {
         return ArrayList(filePaths.map {
@@ -81,7 +88,6 @@ class LocalPicFiles(private val basePathStr: String) : AbstractPicCollection() {
 
     private fun filterImages(path: Path): Boolean {
         if (Files.isDirectory(path)) return false
-        var nameS: String = path.toString()
         val extensions = listOf(
                 "jpg", "jpeg",
                 "3g2",
