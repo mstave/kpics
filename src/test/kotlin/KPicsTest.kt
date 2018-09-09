@@ -1,4 +1,3 @@
-
 import com.drew.imaging.ImageMetadataReader
 import javafx.beans.property.SimpleListProperty
 import kpics.LightroomDB
@@ -17,7 +16,6 @@ class KPicsTest {
     companion object {
         fun getBothTestPics(): Pair<LocalPicFiles, LightroomDB> {
             return Pair(LocalPicFilesTest.getTestPics(), LightroomDBTest.getTestPics())
-
         }
 
         fun getMD5(path: Path): String {
@@ -30,12 +28,11 @@ class KPicsTest {
             return result
         }
     }
+
     // TODO re-enable after adding sample db
     @Disabled
     @Test
-
     fun testComboPaths() {
-
         val (pF, pDB) = getBothTestPics()
         transaction {
             val fPaths: TreeSet<Path> = pF.paths
@@ -45,7 +42,7 @@ class KPicsTest {
 
             Assertions.assertNotNull(firstF)
             Assertions.assertNotNull(firstD)
-            val md5FirstF = getMD5(firstF!!)
+//            val md5FirstF = getMD5(firstF!!)
 //            Assertions.assertEquals(md5FirstF, getMD5(firstD!!))
 //            Assertions.assertEquals(firstF, firstD)
             var missingCount = 0
@@ -86,7 +83,13 @@ class KPicsTest {
     @Test
     fun testBaseStr() {
         Assertions.assertTrue(LocalPicFilesTest.getTestPics().baseStr.endsWith(File.separator))
+    }
 
+    @Test
+    fun testTrailingSlash() {
+        val p = makePicInterface(LocalPicFilesTest.getTestPics().baseStr)
+        Assertions.assertNotNull(p.baseStr)
+        Assertions.assertTrue(p.baseStr!!.endsWith(File.separator))
     }
 
     @Test
@@ -108,9 +111,7 @@ class KPicsTest {
 
     @Test
     fun testMeta() {
-        val imgPath = LocalPicFilesTest.getTestPics().basePath.toString() +  File.separator + "312.png"
-
-
+        val imgPath = LocalPicFilesTest.getTestPics().basePath.toString() + File.separator + "312.png"
 //        val imgPath = "/Users/mstave/Dropbox/Photos/pics/Holly/HollyCat.JPG"
 //        val imgPath = "/Users/mstave/Dropbox/Photos/pics/HollyJTea.jpg"
         val item = ImageMetadataReader.readMetadata(File(imgPath))

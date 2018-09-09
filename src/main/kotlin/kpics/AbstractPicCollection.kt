@@ -14,8 +14,6 @@ abstract class AbstractPicCollection {
     fun toRelativePathStr(path: Path): String? {
         this.baseStr?.let { bstr ->
             var pathMinusBase = path.toString().replaceFirst(bstr, "")
-            // TODO test windows
-            // pathMinusBase = pathMinusBase.replace(("""$bstr:"""), "")
             if (pathMinusBase.startsWith("/", 0)) {
                 pathMinusBase = pathMinusBase.replaceFirst("/", "")
             }

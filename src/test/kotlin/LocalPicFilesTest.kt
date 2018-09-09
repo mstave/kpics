@@ -10,7 +10,6 @@ internal class LocalPicFilesTest {
     private val logger = KotlinLogging.logger {}
 
     companion object {
-        //        const val testPicsPath = "/Users/mstave/Dropbox/Photos/pics/"
         private val testPicsPath = System.getProperty("user.dir") +
                                    File.separator + "testdata" + File.separator + "pics"
 
@@ -45,20 +44,8 @@ internal class LocalPicFilesTest {
         }
     }
 
-    //    import java.util.zip.CRC32
-//
-//    fun main(args: Array<String>) {
-//        val text = "The quick brown fox jumps over the lazy dog"
-//        val crc = CRC32()
-//        with (crc) {
-//            update(text.toByteArray())
-//            println("The CRC-32 checksum of '$text' = ${"%x".format(value)}")
-//        }
-//    }
-    @Test
+   @Test
     fun testMD5sUnique() {
-        val testPicsPathStr = "/Users/mstave/Dropbox/Photos/pics/"
-//        val testPicsPathStr = "/Users/mstave/Dropbox/Photos/pics/"
         val pics = getTestPics()
         val dupe = pics.getDupes()
         assertNotNull(dupe)
@@ -139,20 +126,7 @@ internal class LocalPicFilesTest {
     @Test
     fun testWin() {
         org.junit.jupiter.api.Assumptions.assumeTrue(System.getProperty("os.name").startsWith("Windows"))
-        var p = LocalPicFiles("g:\\Dropbox\\Photos\\pics")
-        val path1 = System.getProperty("user.dir") + File.separator + "testdata" + File.separator + "pics"
-//        var path1 = System.getProperty("user.dir") + File.separator + "testdata/pics"
-        println("???")
-        println(path1)
-        p = LocalPicFiles(path1)
-//        p = LocalPicFiles(
-//        p = getTestPics()
-        println(p.getRelativePaths().first())
-        println(p.getRelativePaths().last())
-        println(p.relativePaths.first())
-        println(p.relativePaths.last())
-        println(p.relativePaths.shuffled().first())
-        println(p.baseStr + File.separator)
+
     }
 
     @Test
