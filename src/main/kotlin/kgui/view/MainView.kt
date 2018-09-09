@@ -1,25 +1,20 @@
 package kgui.view
 
-import com.drew.imaging.ImageMetadataReader
-import com.drew.metadata.exif.ExifThumbnailDirectory
-import com.drew.metadata.exif.ExifThumbnailDirectory.TAG_THUMBNAIL_OFFSET
 import javafx.beans.property.SimpleBooleanProperty
-import javafx.beans.property.SimpleListProperty
 import javafx.beans.property.SimpleObjectProperty
 import javafx.beans.property.SimpleStringProperty
 import javafx.geometry.Insets
 import javafx.geometry.Orientation
-import javafx.scene.control.TreeItem
 import javafx.scene.image.Image
 import javafx.scene.layout.Priority
 import javafx.scene.layout.VBox
 import javafx.scene.paint.Color
+import kgui.exif.ExifView
 import kpics.AbstractPicCollection
-import kpics.PicDB
-import kpics.PicFiles
+import kpics.LightroomDB
+import kpics.LocalPicFiles
 import tornadofx.*
 import java.io.File
-import java.io.FileInputStream
 import java.net.InetAddress
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
@@ -38,16 +33,6 @@ class MainView : View("Pics") {
         with(root) {
             tab("Setup") {
                 this += find<DBForm>(DBForm::pCont to controller)
-//                form() {
-                //                    DB
-//                    text("Lightroom database files")
-//                    fieldset("DB files") {
-//                        field("path") {
-//
-//                        }
-//                    }
-//                    text("Local directories with image files")
-//                }
             }
             tab("All") {
                 splitpane(Orientation.HORIZONTAL) {
@@ -138,7 +123,7 @@ class DBForm : View() {
         pCont.allPicLibs.forEach { picL ->
             log.info("Adding ${picL.baseStr}")
             when (picL) {
-                is PicDB    -> dbs.add(field {
+                is LightroomDB   -> dbs.add(field {
                     textfield { bind(picL.baseStr.toProperty()) }
                     button("remove") {
                         setOnAction {
@@ -150,11 +135,11 @@ class DBForm : View() {
                         }
                     }
                 })
-                is PicFiles -> files.add(field {
+                is LocalPicFiles -> files.add(field {
                     textfield { bind(picL.baseStr.toProperty()) }
                     button("remove")
                 })
-                else        -> {
+                else             -> {
                     log.warning("broken config data")
                 }
             }
@@ -185,11 +170,11 @@ class UberFileModel : ItemViewModel<UberFile>() {
  * keep the TonadoFX stuff separate
  */
 class PicDBModel : JsonModel {
-    var pdb: PicDB? = null
+    var pdb: LightroomDB? = null
     override fun updateModel(json: JsonObject) {
         with(json) {
             val pt = string("path")
-            pdb = PicDB(pt)
+            pdb = LightroomDB(pt)
         }
     }
 
@@ -201,14 +186,14 @@ class PicDBModel : JsonModel {
 }
 
 /**
- * Used for serializing PicFiles to JSON
+ * Used for serializing LocalPicFiles to JSON
  *
  */
 class PicFileModel : JsonModel {
-    var pf: PicFiles? = null
+    var pf: LocalPicFiles? = null
     override fun updateModel(json: JsonObject) {
         with(json) {
-            pf = string("path")?.let { PicFiles(it) }
+            pf = string("path")?.let { LocalPicFiles(it) }
         }
     }
 
@@ -291,11 +276,11 @@ localdirs=["g\:\\\\Dropbox\\\\Photos\\\\pics"]
 //        lightroomDbs=[{"path"\:"g\:\\\\Dropbox\\\\pic.db"},{"path"\:"c\:\\\\Temp\\\\Lightroom Catalog.lrcat"}]
 //        localDirs=[{"path"\:"g\:\\\\Dropbox\\\\Photos\\\\pics"}]
         val pm1 = PicDBModel()
-        pm1.pdb = PicDB(one)
+        pm1.pdb = LightroomDB(one)
         val pm2 = PicDBModel()
-        pm2.pdb = PicDB(two)
+        pm2.pdb = LightroomDB(two)
         val pfm1 = PicFileModel()
-        pfm1.pf = PicFiles(three)
+        pfm1.pf = LocalPicFiles(three)
 
         with(app.config) {
             set("lightroomDbs" to Json.createArrayBuilder().add(pm1.toJSON().asJsonObject()).add(
@@ -319,131 +304,6 @@ class PicsFragment : Fragment() {
     override val root = VBox(picObj.baseStr?.let { label(it) }, lview,
                              label("Count: " + picObj.count + "\tName: " + picObj.toString())
                             )
-}
-
-data class ExifGroup(val name: String, val tagName: String, val desc: String, val children: List<ExifGroup>? = null)
-data class ExifDetail(val k: String, val v: String)
-class ExifViewModel(imgPath: String) : ItemViewModel<ExifGroup>() {
-    init {
-        val data = ImageMetadataReader.readMetadata(File(imgPath))
-
-        data.directories.first().tags.stream().forEach {
-            println("description: ${it.description}, directoryName: ${it.directoryName}, tagName: ${it.tagName}")
-            println(it.directoryName)
-        }
-    }
-//   val imgFilePath : String by param() dd
-}
-
-class ExifController : ItemViewModel<ExifGroup>() {
-    //class ExifController(val imgFilePath : String) : Controller() {
-    var pathProp = SimpleStringProperty()
-    val fixedProp = SimpleStringProperty("start")
-    var listProp = SimpleListProperty(ArrayList<ExifGroup>().observable())
-    fun updateList() {
-        println(pathProp)
-        if (pathProp.value != null && File(pathProp.get()).isFile) {
-            if (listProp.size > 0)
-                listProp.clear()
-            val data = ImageMetadataReader.readMetadata(File(pathProp.get()))
-            // TODO replace with something like fold
-            data.directories.forEach { dir ->
-                val child = ArrayList<ExifGroup>()
-                dir.tags.stream().forEach {
-                    println(it.description)
-                    if (!it.tagName.startsWith("Unknown"))
-                        child.add(ExifGroup("", it.tagName, it.description, null))
-                }
-                listProp.value.add(ExifGroup(dir.name, "", "", child))
-            }
-            fixedProp.set("Newval")
-            fixedProp.value = "beans"
-            println(listProp.size)
-            println(listProp.value.size)
-        }
-    }
-
-    init {
-        pathProp.onChange {
-            updateList()
-            println(listProp.size)
-        }
-    }
-}
-
-class TestV : View() {
-    override val root = pane()
-
-    init {
-        // off 56320
-        // len 17015
-        with(root) {
-            this += imageview {
-                //                var i = FileInputStream(File("/tmp/b.cr2"))
-//                i.skip(56320)
-//                image = Image(i)
-//                i.close()
-                minWidth(1000.0)
-                prefWidth = 1000.0
-                prefHeight = 1000.0
-
-                isPreserveRatio = true
-                val i = FileInputStream(File("/tmp/c.arw"))
-//                var i = FileInputStream(File("/tmp/b.cr2"))
-                val i2 = ImageMetadataReader.readMetadata(i)
-                println(i2)
-                i.close()
-                val thumbnailDirectory = i2.getFirstDirectoryOfType(ExifThumbnailDirectory::class.java)
-                val n = thumbnailDirectory.getString(TAG_THUMBNAIL_OFFSET)
-                val jj = FileInputStream(File("/tmp/c.arw"))
-//                var jj = FileInputStream(File("/tmp/b.cr2"))
-                jj.skip(n.toLong())
-                image = Image(jj, 800.0, 0.0, true, true)
-
-                isPreserveRatio = true
-                minWidth = 1000.0
-                minHeight = 1000.0
-                prefHeight = 1000.0
-            }
-        }
-    }
-}
-
-class ExifView : View() {
-    //    val imgFilePath : String by param()
-    val xCont: ExifController by inject()
-    override val root = scrollpane(true, true)
-
-    init {
-        vbox {
-            /*
-            hbox {
-                label("File Name") {
-                    hboxConstraints { margin = Insets(5.0) }
-                }
-                textfield {
-                    hboxConstraints { margin = Insets(5.0) }
-                    useMaxWidth = true
-                    this.textProperty().bind(xCont.pathProp)
-                }
-            }
-*/
-            treetableview<ExifGroup> {
-                column("Category", ExifGroup::name) { minWidth(150.0) }
-                column("Tag", ExifGroup::tagName) { minWidth(150.0) }
-                column("Description", ExifGroup::desc)
-                root = TreeItem(ExifGroup("data", "", "", xCont.listProp))
-                populate {
-                    it.value.children
-                }
-                root.isExpanded = true
-                root.children.forEach { it.isExpanded = true }
-                smartResize()
-                // Resize to display all elements on the first two levels
-                resizeColumnsToFitContent()
-            }
-        }
-    }
 }
 
 class DupeView : View() {
@@ -474,7 +334,7 @@ class DupeController : Controller() {
     var dupes by dupesProperty
     var doneSearching = SimpleBooleanProperty(false)
     var dupeStrings = ArrayList<String>().observable()
-    var pf : PicFiles? = null
+    var pf: LocalPicFiles? = null
 
     init {
         runAsync {

@@ -5,6 +5,6 @@ import tornadofx.*
 import java.net.InetAddress
 import java.nio.file.Paths
 
-class MyApp : App(MainView::class, Styles::class) {
+class KGuiPics : App(MainView::class, Styles::class) {
     override val configBasePath = Paths.get("conf/${InetAddress.getLocalHost().hostName}")!!
 }

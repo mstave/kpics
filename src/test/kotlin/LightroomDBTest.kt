@@ -1,6 +1,7 @@
 
 
-import kpics.*
+import kpics.LightroomDB
+import kpics.LocalPicFiles
 import mu.KotlinLogging
 import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.transactions.transaction
@@ -12,15 +13,15 @@ import java.io.File
 import java.nio.file.Path
 import java.nio.file.Paths
 
-internal class PicDBTest {
+internal class LightroomDBTest {
     private val logger = KotlinLogging.logger {}
 
     companion object {
         const val testPicsPath = "/Users/mstave/Dropbox/Photos/testPicsPath/"
-        fun getTestPics(): PicDB {
+        fun getTestPics(): LightroomDB {
             val dropbox = "/Users/mstave/Dropbox"
             val filename = java.io.File("$dropbox/pic.db").absolutePath
-            return PicDB(filename)
+            return LightroomDB(filename)
         }
     }
 
@@ -35,7 +36,7 @@ internal class PicDBTest {
     fun testlocDBRel() {
         val dropbox = "/Users/mstave/Dropbox"
         val localdbFile = java.io.File("$dropbox/pic.db").absolutePath
-        val db = PicDB(localdbFile)
+        val db = LightroomDB(localdbFile)
         print(db.relativePaths.observable())
         print(db.count)
         assertTrue(db.relativePaths.size > 0)
@@ -53,7 +54,7 @@ internal class PicDBTest {
     @org.junit.jupiter.api.Test
     fun bogusDBIsBogus() {
         val exception = assertThrows(IllegalArgumentException::class.java) {
-            val bogus = PicDB("bogus.db")
+            val bogus = LightroomDB("bogus.db")
             println(bogus)
         }
         println(exception)
@@ -68,7 +69,7 @@ internal class PicDBTest {
     fun hasRows() {
         val db = getTestPics()
         db.xact {
-            assertTrue(LibFile.find { AgLibraryFile.extension eq "MP4" }.count() > 0)
+            assertTrue(LightroomDB.LibFile.find { LightroomDB.AgLibraryFile.extension eq "MP4" }.count() > 0)
         }
     }
 
@@ -80,14 +81,14 @@ internal class PicDBTest {
     fun example() {
         val db = getTestPics()
         db.xact {
-            val folderQ = LibFolder.wrapRows(
-                    AgLibraryFolder.innerJoin(AgLibraryFile).select { AgLibraryFile.extension eq "MP4" }
-            ).toList().distinct()
+            val folderQ = LightroomDB.LibFolder.wrapRows(
+                    LightroomDB.AgLibraryFolder.innerJoin(LightroomDB.AgLibraryFile).select { LightroomDB.AgLibraryFile.extension eq "MP4" }
+                                                        ).toList().distinct()
             logger.debug("Folder: " + folderQ.toString())
             folderQ.forEach { logger.debug(it.toString()) }
-            val fileQ = LibFile.wrapRows(
-                    AgLibraryFolder.innerJoin(AgLibraryFile).select { AgLibraryFile.extension eq "MP4" }
-            ).toList()
+            val fileQ = LightroomDB.LibFile.wrapRows(
+                    LightroomDB.AgLibraryFolder.innerJoin(LightroomDB.AgLibraryFile).select { LightroomDB.AgLibraryFile.extension eq "MP4" }
+                                                    ).toList()
             logger.debug("File: " + fileQ.toString())
         }
     }
@@ -95,7 +96,7 @@ internal class PicDBTest {
     @Test
     fun testGetRel() {
         val it: Path = getTestPics().paths.last()
-        val localF = PicFiles("/Users/mstave/Dropbox/Photos/pics")
+        val localF = LocalPicFiles("/Users/mstave/Dropbox/Photos/pics")
         val pathVal = Paths.get(
                 it.fileName.toString().replace(
                         (localF.baseStr), ""))
@@ -104,7 +105,7 @@ internal class PicDBTest {
     }
     @Test
     fun containsRelPathTest() {
-        val f: PicDB = getTestPics()
+        val f: LightroomDB = getTestPics()
         println(f.containsRelPath(Paths.get("1980/February/0728101523-00.jpg")))
 
     }
@@ -127,13 +128,13 @@ internal class PicDBTest {
 
     @Test
     fun testContainsName() {
-        val f: PicDB = getTestPics()
+        val f: LightroomDB = getTestPics()
         print(f.containsName("DSC00665.ARW"))
     }
 
     @Test
     fun testGetFullPath() {
-        val f: PicDB = getTestPics()
+        val f: LightroomDB = getTestPics()
 //        print(f.getFullPath("DSC00665.ARW"))
         val first = f.getAll()!!.first()
         val firstName = first.baseName + "." +
@@ -145,14 +146,14 @@ internal class PicDBTest {
 
     @Test
     fun testContainsName2() {
-        val f: PicDB = getTestPics()
+        val f: LightroomDB = getTestPics()
         println(f.containsName("BILLROCK.JPG"))
         println(f.containsName("WISESHOW.JPG"))
     }
 
     @Test
     fun testContainsName3() {
-        val f: PicDB = getTestPics()
+        val f: LightroomDB = getTestPics()
         println(f.containsName("WISESHOW.JPG"))
     }
 

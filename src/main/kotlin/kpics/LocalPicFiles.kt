@@ -17,8 +17,8 @@ import kotlin.collections.set
 
 typealias DirDupeStats = HashMap<String, Pair<Int, Int>>
 
-class PicFiles(private val basePathStr: String) : AbstractPicCollection() {
-    // @TODO check out delegating properties from basePath to be exposed as kpics.PicFiles properties
+class LocalPicFiles(private val basePathStr: String) : AbstractPicCollection() {
+    // @TODO check out delegating properties from basePath to be exposed as kpics.LocalPicFiles properties
     private val logger: KLogger = KotlinLogging.logger {}
     private var dupesChecked = false
     private var _dupeFiles = HashSet<HashSet<String>>()  // in order to facilitate multithreaded checking
@@ -287,10 +287,10 @@ fun main(args: Array<String>) {
 //    println(kpics.getMD5(Paths.get("/Users/mstave/Dropbox/Photos/pics/one0100.jpg")))
 //    println(kpics.getMD5(Paths.get("/Users/mstave/Dropbox/Photos/pics/one0028.jpg")))
     val unique = Collections.synchronizedMap(HashMap<String, String>())
-    val pics = PicFiles("/Users/mstave/Dropbox/Photos/pics/")
+    val pics = LocalPicFiles("/Users/mstave/Dropbox/Photos/pics/")
     val dropbox = "/Users/mstave/Dropbox"
     val filename = java.io.File("$dropbox/pic.db").absolutePath
-    val pdb = PicDB(filename)
+    val pdb = LightroomDB(filename)
     transaction {
         dbpaths = java.util.concurrent.ConcurrentSkipListSet(pdb.paths)
     }

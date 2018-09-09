@@ -1,12 +1,12 @@
 import kotlinx.coroutines.experimental.async
 import kotlinx.coroutines.experimental.runBlocking
-import kpics.PicFiles
+import kpics.LocalPicFiles
 import mu.KotlinLogging
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Test
 import java.io.File
 
-internal class PicFilesTest {
+internal class LocalPicFilesTest {
     private val logger = KotlinLogging.logger {}
 
     companion object {
@@ -14,8 +14,8 @@ internal class PicFilesTest {
         private val testPicsPath = System.getProperty("user.dir") +
                                    File.separator + "testdata/pics"
 
-        fun getTestPics(): PicFiles {
-            return PicFiles(testPicsPath)
+        fun getTestPics(): LocalPicFiles {
+            return LocalPicFiles(testPicsPath)
         }
     }
 
@@ -139,7 +139,7 @@ internal class PicFilesTest {
     @Test
     fun testWin() {
         org.junit.jupiter.api.Assumptions.assumeTrue(System.getProperty("os.name").startsWith("Windows"))
-        val p = PicFiles("g:\\Dropbox\\Photos\\pics")
+        val p = LocalPicFiles("g:\\Dropbox\\Photos\\pics")
         println(p.getRelativePaths().first())
         println(p.baseStr + File.separator)
     }

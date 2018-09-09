@@ -1,8 +1,8 @@
 
 import com.drew.imaging.ImageMetadataReader
 import javafx.beans.property.SimpleListProperty
-import kpics.PicDB
-import kpics.PicFiles
+import kpics.LightroomDB
+import kpics.LocalPicFiles
 import kpics.makePicInterface
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.junit.jupiter.api.Assertions
@@ -15,8 +15,8 @@ import java.util.*
 
 class KPicsTest {
     companion object {
-        fun getBothTestPics(): Pair<PicFiles, PicDB> {
-            return Pair(PicFilesTest.getTestPics(), PicDBTest.getTestPics())
+        fun getBothTestPics(): Pair<LocalPicFiles, LightroomDB> {
+            return Pair(LocalPicFilesTest.getTestPics(), LightroomDBTest.getTestPics())
 
         }
 
@@ -85,14 +85,14 @@ class KPicsTest {
 
     @Test
     fun testMakePicInterfaceFile() {
-        val f = makePicInterface(PicFilesTest.getTestPics().baseStr)
-        Assertions.assertEquals(f.javaClass, PicFiles::class.java)
+        val f = makePicInterface(LocalPicFilesTest.getTestPics().baseStr)
+        Assertions.assertEquals(f.javaClass, LocalPicFiles::class.java)
     }
 
     @Test
     fun testMakePicInterfaceDB() {
         val f = makePicInterface("/Users/mstave/Dropbox/pic.db")
-        Assertions.assertEquals(f.javaClass, PicDB::class.java)
+        Assertions.assertEquals(f.javaClass, LightroomDB::class.java)
     }
 
     @Test

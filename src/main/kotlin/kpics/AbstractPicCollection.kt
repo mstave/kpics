@@ -25,7 +25,7 @@ abstract class AbstractPicCollection {
 
 fun makePicInterface(dbOrDir: String): AbstractPicCollection = when {
     File(dbOrDir).isDirectory ->
-        PicFiles(dbOrDir)
+        LocalPicFiles(dbOrDir)
     else                      ->
-        PicDB(dbOrDir)
+        LightroomDB(dbOrDir)
 }
