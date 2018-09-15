@@ -13,6 +13,7 @@ import kgui.exif.ExifView
 import kpics.AbstractPicCollection
 import kpics.LightroomDB
 import kpics.LocalPicFiles
+import mu.KotlinLogging
 import tornadofx.*
 import java.io.File
 import java.net.InetAddress
@@ -20,6 +21,7 @@ import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentSkipListSet
 import javax.json.Json
+import javax.json.JsonArray
 import javax.json.JsonObject
 
 class MainView : View("Pics") {
@@ -212,35 +214,42 @@ class PicsController : Controller() {
     val uberFileModel = UberFileModel()
     private var uberMap = ConcurrentHashMap<String, UberFile>()
     var diffs = ArrayList<UberFile>().observable()
-    private val picdbs = app.config.jsonArray("lightroomDbs")
-    val picFiles = app.config.jsonArray("localDirs")
-
-    init {
+    lateinit var picdbs: JsonArray
+    lateinit var picFiles: JsonArray
+    fun loadDupes() {
         log.info("Loading")
         loadPicConfig()
-        allPicLibs.parallelStream().forEach { p ->
+//        allPicLibs.parallelStream().forEach { p ->
+        allPicLibs.forEach { p ->
             log.info("Loading ${p.baseStr}")
-            p.relativePaths.forEach { pathVal ->
+            p.relativePaths.parallelStream().forEach { pathVal ->
                 var pathValXPlatform = pathVal
-                if (File.separatorChar == '\\') {
-                    pathValXPlatform = pathVal?.replace(File.separatorChar, '/')
+//                if (File.separatorChar == '\\') {
+//                    pathValXPlatform = pathVal?.replace(File.separatorChar, '/')
+//                }
+                val exist = pathValXPlatform?.let {
+                    uberMap.putIfAbsent(it,
+                                        UberFile(pathValXPlatform,
+                                                 ConcurrentSkipListSet(setOf(p.baseStr))))
                 }
-                    val exist = pathValXPlatform?.let {
-                        uberMap.putIfAbsent(it,
-                                            UberFile(pathValXPlatform,
-                                                     ConcurrentSkipListSet(setOf(p.baseStr))))
-                    }
-                    exist?.let {
-                        uberMap[pathValXPlatform]!!.basePaths.add(p.baseStr)
+                exist?.let {
+                    uberMap[pathValXPlatform]!!.basePaths.add(p.baseStr)
                 }
             }
+            diffs = ArrayList(uberMap.values).observable() // update table after each "column"
+            log.info("----- Done: ${p.baseStr}")
         }
-        diffs = ArrayList(uberMap.values).observable() // update table after each "column"
+        log.info("-----====  DUPE LOADING COMPLETE" )
+    }
+
+    init {
+        loadDupes()
     }
 
     private fun loadPicConfig() {
+        val theapp = app
         if (!app.config.containsKey("lightroomDbs")) {
-            createConfig()
+            createConfig(app)
         } else {
             println("No property file detected")
             val ex = """
@@ -250,46 +259,48 @@ localdirs=["g\:\\\\Dropbox\\\\Photos\\\\pics"]
             println("Create conf/[hostname]/app.properties with contents like")
             println(ex)
         }
+        picdbs = app.config.jsonArray("lightroomDbs")!!
         picdbs?.let { jsonArray ->
             for (dbPath in jsonArray) {
                 dbPath.asJsonObject().toModel<PicDBModel>().pdb?.let { allPicLibs.add(it) }
             }
         }
+        picFiles = app.config.jsonArray("localDirs")!!
         if (picFiles == null) {
             log.warning("No local paths specified")
         } else for (path in picFiles) {
             path.asJsonObject().toModel<PicFileModel>().pf?.let { picFiles1 -> allPicLibs.add(picFiles1) }
         }
     }
+}
 
-    private fun createConfig() {
-        println("Creating config for ${InetAddress.getLocalHost().hostName}")
-        val drop = "/Users/mstave/Dropbox"
-        var two = "/Users/mstave/temp/sb.db"
-        var one = "$drop/pic.db"
-        var three = "$drop/Photos/pics"
-        if (InetAddress.getLocalHost().hostName == "lp") {
-            one = "g:\\Dropbox\\pic.db"
-            two = "c:\\Temp\\Lightroom Catalog.lrcat"
-            three = "g:\\Dropbox\\Photos\\pics"
-        }
+fun createConfig(app: App) {
+    println("Creating config for ${InetAddress.getLocalHost().hostName}")
+    val drop = "/Users/mstave/Dropbox"
+    var two = "/Users/mstave/temp/sb.db"
+    var one = "$drop/pic.db"
+    var three = "$drop/Photos/pics"
+    if (InetAddress.getLocalHost().hostName == "lp") {
+        one = "g:\\Dropbox\\pic.db"
+        two = "c:\\Temp\\Lightroom Catalog.lrcat"
+        three = "g:\\Dropbox\\Photos\\pics"
+    }
 //        lightroomDbs=[{"path"\:"g\:\\\\Dropbox\\\\pic.db"},{"path"\:"c\:\\\\Temp\\\\Lightroom Catalog.lrcat"}]
 //        localDirs=[{"path"\:"g\:\\\\Dropbox\\\\Photos\\\\pics"}]
-        val pm1 = PicDBModel()
-        pm1.pdb = LightroomDB(one)
-        val pm2 = PicDBModel()
-        pm2.pdb = LightroomDB(two)
-        val pfm1 = PicFileModel()
-        pfm1.pf = LocalPicFiles(three)
+    val pm1 = PicDBModel()
+    pm1.pdb = LightroomDB(one)
+    val pm2 = PicDBModel()
+    pm2.pdb = LightroomDB(two)
+    val pfm1 = PicFileModel()
+    pfm1.pf = LocalPicFiles(three)
 
-        with(app.config) {
-            set("lightroomDbs" to Json.createArrayBuilder().add(pm1.toJSON().asJsonObject()).add(
-                    pm2.toJSON().asJsonObject()).build())
-            set("localDirs" to Json.createArrayBuilder().add(pfm1.toJSON().asJsonObject()).build())
-            save()
-        }
-        println("Config complete")
+    with(app.config) {
+        set("lightroomDbs" to Json.createArrayBuilder().add(pm1.toJSON().asJsonObject()).add(
+                pm2.toJSON().asJsonObject()).build())
+        set("localDirs" to Json.createArrayBuilder().add(pfm1.toJSON().asJsonObject()).build())
+        save()
     }
+    println("Config complete")
 }
 
 class PicsFragment : Fragment() {
@@ -308,7 +319,7 @@ class PicsFragment : Fragment() {
 
 class DupeView : View() {
     override val root = scrollpane(true, true)
-    private val dupeC: DupeController by inject()
+    val dupeC: DupeController by inject()
     private var msg = text("Searching for duplicates, this may take a few minutes...")
 
     init {
@@ -329,6 +340,7 @@ class DupeView : View() {
 }
 
 class DupeController : Controller() {
+    private val logger = KotlinLogging.logger {}
     private val picsCont: PicsController by inject()
     private val dupesProperty = SimpleObjectProperty<HashSet<HashSet<String>>>()
     private var dupes by dupesProperty
@@ -339,14 +351,16 @@ class DupeController : Controller() {
     init {
         runAsync {
             picsCont.picFiles?.first()?.asJsonObject()?.toModel<PicFileModel>()?.pf?.let {
+                logger.info("Looking for dupes")
                 pf = it
                 dupes = it.getDupes()
             }
-            doneSearching.set(true)
-        } ui { _ ->
             pf?.let {
                 dupeStrings.addAll(it.getDupeFileList())
             }
+            doneSearching.set(true)
+            logger.info("done looking for dupes")
+        } ui { _ ->
         }
     }
 }

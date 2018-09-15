@@ -113,13 +113,7 @@ class LocalPicFiles(private val basePathStr: String) : AbstractPicCollection() {
         return result
     }
 
-    fun getDirsWithAllDupes(res: DirDupeStats) {
-        res.forEach {
-            if (it.value.first == it.value.second) {
-                println(it.key)
-            }
-        }
-    }
+
 
     fun getDupesForFile(fName: String): ArrayList<String> {
         val result = ArrayList<String>()
@@ -170,22 +164,28 @@ class LocalPicFiles(private val basePathStr: String) : AbstractPicCollection() {
         if (dupesChecked)
             return _dupeFiles
         val dupeSizes = getDupeSizes()
-        logger.debug("After initial pass: ${dupeSizes.size}")
-        getDupeMd5(dupeSizes).values.forEach {
+        logger.info("After initial pass: ${dupeSizes.size}")
+        val dupeMd5 = getDupeMd5(dupeSizes)
+//        getDupeMd5(dupeSizes).values.parallelStream().forEach {
+        dupeMd5.values.parallelStream().forEach {
             _dupeFiles.add(it.toHashSet())
         }
-        logger.debug("After second pass: ${dupeSizes.size}")
+        logger.info("After second pass: ${dupeSizes.size}")
         dupesChecked = true
         return _dupeFiles
     }
 
+    // input hashmap of filesizes -> list of paths with files of that size
     private fun getDupeMd5(
-            priorDupes: ConcurrentHashMap<String, ConcurrentSkipListSet<String>>):
+            priorDupes: ConcurrentHashMap<Long, ConcurrentSkipListSet<String>>):
             ConcurrentHashMap<String, ConcurrentSkipListSet<String>> {
-        val md5s = ConcurrentHashMap<String, String>()
         val dupeMD5s = ConcurrentHashMap<String, ConcurrentSkipListSet<String>>()
-        priorDupes.values.parallelStream().forEach { pathList ->
-            pathList.forEach { pathStr ->
+        logger.info("starting MD5 check")
+        // for each set of files that are of the same size
+        priorDupes.values.parallelStream().forEach() { pathList ->
+            // different bucket of each unique filesize
+            val md5s = ConcurrentHashMap<String, String>()
+            pathList.parallelStream().forEach { pathStr ->
                 val md5 = getMD5(Paths.get(pathStr))
                 val existingMD5 = md5s.putIfAbsent(md5, pathStr)
                 if (existingMD5 != null) {
@@ -198,17 +198,20 @@ class LocalPicFiles(private val basePathStr: String) : AbstractPicCollection() {
                 }
             }
         }
+        logger.info("complete: MD5 check")
         return dupeMD5s
     }
 
     // TODO pass filePaths as a param
+    // return map<file size,set<path str>>
     private fun getDupeSizes():
-            ConcurrentHashMap<String, ConcurrentSkipListSet<String>> {
-        val sizes = ConcurrentHashMap<String, String>()
-        val dupeSizes = ConcurrentHashMap<String, ConcurrentSkipListSet<String>>()
+            ConcurrentHashMap<Long, ConcurrentSkipListSet<String>> {
+        val sizes = ConcurrentHashMap<Long, String>()
+        val dupeSizes = ConcurrentHashMap<Long, ConcurrentSkipListSet<String>>()
+        logger.info("starting first pass for dupes, by size")
         filePaths.parallelStream().forEach { p ->
             val f = p.toString()
-            val strLen = p.toFile().length().toString()
+            val strLen = p.toFile().length()
             val existingPath = sizes.putIfAbsent(strLen, f)
             if (existingPath != null) {
                 val doesExist = dupeSizes.putIfAbsent(
@@ -219,6 +222,7 @@ class LocalPicFiles(private val basePathStr: String) : AbstractPicCollection() {
                 }
             }
         }
+        logger.info("complete: first pass for dupes, by size")
         return dupeSizes
     }
 
@@ -266,6 +270,9 @@ fun getMD5(path: Path): String {
 //    val md = java.security.MessageDigest.getInstance("SHA")
     val md = java.security.MessageDigest.getInstance("MD5")
     val bytes = md.digest(path.toFile().readBytes())
+//    var c = CharArray(10000)
+//    val read = path.toFile().reader().read(c, 0, 5000)
+//    val bytes = c as ByteArray
     var result = ""
     for (byte in bytes) {
         result += "%02x".format(byte)
@@ -287,7 +294,7 @@ fun main(args: Array<String>) {
     transaction {
         dbpaths = java.util.concurrent.ConcurrentSkipListSet(pdb.paths)
     }
-    pics.filePaths.parallelStream().forEach {
+    pics.filePaths.forEach {
         //        println("%s : %s ".format( kpics.getMD5(it),it.toString()))
         val md = getMD5(it)
         if (unique.containsKey(md)) println(
