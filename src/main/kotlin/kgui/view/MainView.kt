@@ -3,7 +3,6 @@ package kgui.view
 import javafx.beans.property.SimpleBooleanProperty
 import javafx.beans.property.SimpleObjectProperty
 import javafx.beans.property.SimpleStringProperty
-import javafx.geometry.Insets
 import javafx.geometry.Orientation
 import javafx.scene.image.Image
 import javafx.scene.layout.Priority
@@ -27,8 +26,6 @@ import javax.json.JsonObject
 class MainView : View("Pics") {
     private val controller: PicsController by inject()
     override val root = tabpane()
-    private val exif: ExifView by inject()
-    private val imgPath = SimpleStringProperty()
     private val dupes: DupeView by inject()
 
     init {
@@ -47,63 +44,7 @@ class MainView : View("Pics") {
                 }
             }
             tab("differences") {
-                val tv = tableview<UberFile> {
-                    asyncItems { controller.diffs }
-                    columnResizePolicy = SmartResize.POLICY
-                    readonlyColumn("File", UberFile::filePath).prefWidth(320)
-                    for (v in controller.allPicLibs) {
-                        readonlyColumn(v.baseStr!!, UberFile::basePaths).minWidth(
-                                150.0).cellFormat { bPaths ->
-                            if (bPaths.contains(v.baseStr)) {
-                                text = "present"
-                                style {
-                                    textFill = Color.DARKGREEN
-                                }
-                            } else {
-                                text = "missing"
-                                style {
-                                    textFill = Color.RED
-                                }
-                            }
-                        }
-                    }
-                    selectFirst()
-                    bindSelected(controller.uberFileModel)
-                }
-                tv.prefHeight = 1000.0
-                val imgV = imageview()
-                imgV.isPreserveRatio = true
-                val iPane = hbox {
-                }
-                val pathText = text(controller.uberFileModel.filePath)
-                pathText.vboxConstraints { margin = Insets(5.0) }
-                val info = vbox()
-                imgV.fitHeightProperty().bind(iPane.heightProperty())
-//                info.add(pathText)
-                exif.xCont.pathProp.bind(imgPath)
-//                imgPath.bind(exif.xCont.pathProp)
-                info.add(exif)
-                iPane.add(info)
-                iPane.add(pane { add(imgV) })
-                vbox {
-                    //                    tv.bindSelected(Property)
-                    tv.onSelectionChange { sel ->
-                        imgV.image = null
-                        controller.allPicLibs.forEach { picL ->
-                            if (imgV.image == null) {
-                                val maybeFile = picL.getFullPath(sel!!.filePath)
-                                if (maybeFile != null && File(maybeFile).isFile) {
-                                    imgV.image = Image(File(maybeFile).toURI().toString())
-                                }
-                                imgPath.set(maybeFile.toString())
-                            }
-                        }
-                    }
-                }
-                splitpane(Orientation.VERTICAL) {
-                    add(tv)
-                    add(iPane)
-                }
+                this += find<DiffView>(DiffView::pCont to controller)
             }
             tab("EXIF details") {
                 //                this += exif.root
@@ -112,6 +53,77 @@ class MainView : View("Pics") {
                 this += dupes.root
             }
         }
+    }
+}
+
+class DiffView : View() {
+    private val exif: ExifView by inject()
+    private val imgPath = SimpleStringProperty()
+    val pCont: PicsController by param()
+    val tv = tableview<UberFile> {
+        prefHeight = 1000.0
+        asyncItems { pCont.diffs }
+        columnResizePolicy = SmartResize.POLICY
+        readonlyColumn("File", UberFile::filePath).prefWidth(320)
+        for (v in pCont.allPicLibs) {
+            readonlyColumn(v.baseStr!!, UberFile::basePaths).minWidth(
+                    150.0).cellFormat { bPaths ->
+                if (bPaths.contains(v.baseStr)) {
+                    text = "present"
+                    style {
+                        textFill = Color.DARKGREEN
+                    }
+                } else {
+                    text = "missing"
+                    style {
+                        textFill = Color.RED
+                    }
+                }
+            }
+        }
+        bindSelected(pCont.uberFileModel)
+        onSelectionChange { sel ->
+            imgV.image = null
+            pCont.allPicLibs.forEach { picL ->
+                if (imgV.image == null) {
+                    val maybeFile = picL.getFullPath(sel!!.filePath)
+                    if (maybeFile != null && File(maybeFile).isFile) {
+                        imgV.image = Image(File(maybeFile).toURI().toString())
+                    }
+                    imgPath.set(maybeFile.toString())
+                }
+            }
+        }
+    }
+    val imgV = imageview() {
+        isPreserveRatio = true
+
+
+        exif.xCont.pathProp.bind(imgPath)
+    }
+    val bottomPane = splitpane(Orientation.HORIZONTAL) {
+        setDividerPosition(0, .35)
+        fitToParentSize()
+        add(exif)
+//        add(pane {
+//            fitToParentSize()
+//            add(exif)
+//        })
+        add(pane {
+            fitToParentSize()
+            prefWidth(1500.0)
+            imgV.fitHeightProperty().bind(heightProperty())
+            add(imgV)
+        })
+    }
+    override val root = splitpane(Orientation.VERTICAL) {
+        add(tv)
+        add(bottomPane)
+    }
+
+    init {
+        tv.selectFirst()
+//        imgV.fitHeightProperty().bind(bottomPane.heightProperty())
     }
 }
 
@@ -219,8 +231,7 @@ class PicsController : Controller() {
     fun loadDupes() {
         log.info("Loading")
         loadPicConfig()
-//        allPicLibs.parallelStream().forEach { p ->
-        allPicLibs.forEach { p ->
+        allPicLibs.parallelStream().forEach { p ->
             log.info("Loading ${p.baseStr}")
             p.relativePaths.parallelStream().forEach { pathVal ->
                 var pathValXPlatform = pathVal
@@ -239,7 +250,7 @@ class PicsController : Controller() {
             diffs = ArrayList(uberMap.values).observable() // update table after each "column"
             log.info("----- Done: ${p.baseStr}")
         }
-        log.info("-----====  DUPE LOADING COMPLETE" )
+        log.info("-----====  DUPE LOADING COMPLETE")
     }
 
     init {

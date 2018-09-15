@@ -23,12 +23,10 @@ class ExifViewModel(imgPath: String) : ItemViewModel<ExifGroup>() {
 }
 
 class ExifController : ItemViewModel<ExifGroup>() {
-    //class ExifController(val imgFilePath : String) : Controller() {
     var pathProp = SimpleStringProperty()
     private val fixedProp = SimpleStringProperty("start")
     var listProp = SimpleListProperty(ArrayList<ExifGroup>().observable())
     private fun updateList() {
-        println(pathProp)
         if (pathProp.value != null && File(pathProp.get()).isFile) {
             if (listProp.size > 0)
                 listProp.clear()
@@ -37,16 +35,11 @@ class ExifController : ItemViewModel<ExifGroup>() {
             data.directories.forEach { dir ->
                 val child = ArrayList<ExifGroup>()
                 dir.tags.stream().forEach {
-//                    println(it.description)
                     if (!it.tagName.startsWith("Unknown"))
                         child.add(ExifGroup("", it.tagName, it.description, null))
                 }
                 listProp.value.add(ExifGroup(dir.name, "", "", child))
             }
-            fixedProp.set("Newval")
-            fixedProp.value = "beans"
-//            println(listProp.size)
-//            println(listProp.value.size)
         }
     }
 
@@ -64,33 +57,38 @@ class ExifView : View() {
     override val root = scrollpane(true, true)
 
     init {
-        vbox {
-            /*
-            hbox {
-                label("File Name") {
-                    hboxConstraints { margin = Insets(5.0) }
-                }
-                textfield {
-                    hboxConstraints { margin = Insets(5.0) }
-                    useMaxWidth = true
-                    this.textProperty().bind(xCont.pathProp)
-                }
+//        vbox {
+        /*
+        hbox {
+            label("File Name") {
+                hboxConstraints { margin = Insets(5.0) }
             }
-*/
-            treetableview<ExifGroup> {
-                column("Category", ExifGroup::name) { minWidth(150.0) }
-                column("Tag", ExifGroup::tagName) { minWidth(150.0) }
-                column("Description", ExifGroup::desc)
-                root = TreeItem(ExifGroup("data", "", "", xCont.listProp))
-                populate {
-                    it.value.children
-                }
-                root.isExpanded = true
-                root.children.forEach { it.isExpanded = true }
-                smartResize()
-                // Resize to display all elements on the first two levels
-                resizeColumnsToFitContent()
+            textfield {
+                hboxConstraints { margin = Insets(5.0) }
+                useMaxWidth = true
+                this.textProperty().bind(xCont.pathProp)
             }
         }
+*/
+        treetableview<ExifGroup> {
+            column("Category", ExifGroup::name) { minWidth(150.0) }
+            column("Tag", ExifGroup::tagName) { minWidth(150.0) }
+            column("Description", ExifGroup::desc) {
+                minWidth(50.0)
+                prefWidth(450)
+            }
+            root = TreeItem(ExifGroup("data", "", "", xCont.listProp))
+            populate {
+                it.value.children
+            }
+            root.isExpanded = true
+            root.children.forEach { it.isExpanded = true }
+            smartResize()
+            // Resize to display all elements on the first two levels
+            resizeColumnsToFitContent()
+            fitToParentSize()
+//            prefHeight(1200.0)
+        }
     }
+//    }
 }
