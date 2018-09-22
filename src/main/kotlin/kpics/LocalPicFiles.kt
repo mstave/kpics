@@ -113,8 +113,6 @@ class LocalPicFiles(private val basePathStr: String) : AbstractPicCollection() {
         return result
     }
 
-
-
     fun getDupesForFile(fName: String): ArrayList<String> {
         val result = ArrayList<String>()
         val dupes = getDupes()
@@ -158,27 +156,58 @@ class LocalPicFiles(private val basePathStr: String) : AbstractPicCollection() {
         return retval
     }
 
+    /**
+     * @return  <<file1 file2><file3 file4 file5> ... >
+     */
     @Synchronized
     fun getDupes(): HashSet<HashSet<String>>? {
         // memoize, since this may be an expensive operation
         if (dupesChecked)
             return _dupeFiles
-        val dupeSizes = getDupeSizes()
-        logger.info("After initial pass: ${dupeSizes.size}")
+        val dupeSizes = getDupeSizes(filePaths)
+        logger.info("Based upon size, dupe count: ${dupeSizes.size}")
         val dupeMd5 = getDupeMd5(dupeSizes)
-//        getDupeMd5(dupeSizes).values.parallelStream().forEach {
         dupeMd5.values.parallelStream().forEach {
             _dupeFiles.add(it.toHashSet())
         }
-        logger.info("After second pass: ${dupeSizes.size}")
+        logger.info("After checking MD5s of size-based dupes : ${dupeSizes.size}")
         dupesChecked = true
         return _dupeFiles
     }
 
-    // input hashmap of filesizes -> list of paths with files of that size
-    private fun getDupeMd5(
-            priorDupes: ConcurrentHashMap<Long, ConcurrentSkipListSet<String>>):
-            ConcurrentHashMap<String, ConcurrentSkipListSet<String>> {
+    /**
+     * Find dupes in a list of files based upon their size
+     * @param set of paths to files to be analyzed
+     * @return map<file size,set<path str>>
+     */
+    private fun getDupeSizes(paths: Set<Path>):
+           HashMap<Long, ConcurrentSkipListSet<String>> {
+        val sizes = ConcurrentHashMap<Long, String>() // <file length> -> <file path with that length>
+        val dupeSizes = ConcurrentHashMap<Long, ConcurrentSkipListSet<String>>() // <file length> -> <set of paths>
+        logger.info("starting first pass for dupes, by size")
+        paths.parallelStream().forEach { p ->
+            val pathString = p.toString()
+            val fileSize = p.toFile().length()
+            val existingPath = sizes.putIfAbsent(fileSize, pathString)
+            if (existingPath != null) {  // a file of this length has been found already
+                val doesExist = dupeSizes.putIfAbsent( // 1st dupe for this size
+                        fileSize,
+                        ConcurrentSkipListSet(setOf(pathString).plus(existingPath)))
+                doesExist?.let {
+                    dupeSizes[fileSize]!!.add(pathString) // this is the 3rd+ time we've seen this length
+                }
+            }
+        }
+        logger.info("complete: first pass for dupes, by size")
+        return HashMap(dupeSizes)
+    }
+
+    /**
+     * @param priorDupes input hashmap of <<filesize -> list of files of that size>>
+     * @return <<md5value1 : <fileA, fileB>>,<md5value2 : <fileC, fileD, fileE>>>
+     */
+    private fun getDupeMd5(priorDupes: Map<Long, ConcurrentSkipListSet<String>>):
+            HashMap<String, ConcurrentSkipListSet<String>> {
         val dupeMD5s = ConcurrentHashMap<String, ConcurrentSkipListSet<String>>()
         logger.info("starting MD5 check")
         // for each set of files that are of the same size
@@ -199,31 +228,7 @@ class LocalPicFiles(private val basePathStr: String) : AbstractPicCollection() {
             }
         }
         logger.info("complete: MD5 check")
-        return dupeMD5s
-    }
-
-    // TODO pass filePaths as a param
-    // return map<file size,set<path str>>
-    private fun getDupeSizes():
-            ConcurrentHashMap<Long, ConcurrentSkipListSet<String>> {
-        val sizes = ConcurrentHashMap<Long, String>()
-        val dupeSizes = ConcurrentHashMap<Long, ConcurrentSkipListSet<String>>()
-        logger.info("starting first pass for dupes, by size")
-        filePaths.parallelStream().forEach { p ->
-            val f = p.toString()
-            val strLen = p.toFile().length()
-            val existingPath = sizes.putIfAbsent(strLen, f)
-            if (existingPath != null) {
-                val doesExist = dupeSizes.putIfAbsent(
-                        strLen,
-                        ConcurrentSkipListSet(setOf(f).plus(existingPath)))
-                doesExist?.let {
-                    dupeSizes[strLen]!!.add(f)
-                }
-            }
-        }
-        logger.info("complete: first pass for dupes, by size")
-        return dupeSizes
+        return HashMap(dupeMD5s)
     }
 
     fun getDupeFileList(): ArrayList<String> {

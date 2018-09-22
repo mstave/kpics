@@ -19,7 +19,6 @@ class ExifViewModel(imgPath: String) : ItemViewModel<ExifGroup>() {
             println(it.directoryName)
         }
     }
-//   val imgFilePath : String by param() dd
 }
 
 class ExifController : ItemViewModel<ExifGroup>() {
@@ -86,8 +85,7 @@ class ExifView : View() {
             smartResize()
             // Resize to display all elements on the first two levels
             resizeColumnsToFitContent()
-            fitToParentSize()
-//            prefHeight(1200.0)
+            this.fitToParentSize()
         }
     }
 //    }

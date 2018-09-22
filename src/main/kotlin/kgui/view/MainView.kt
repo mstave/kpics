@@ -12,7 +12,6 @@ import kgui.exif.ExifView
 import kpics.AbstractPicCollection
 import kpics.LightroomDB
 import kpics.LocalPicFiles
-import mu.KotlinLogging
 import tornadofx.*
 import java.io.File
 import java.net.InetAddress
@@ -24,7 +23,7 @@ import javax.json.JsonArray
 import javax.json.JsonObject
 
 class MainView : View("Pics") {
-    private val controller: PicsController by inject()
+    private val controller: PicCollectionsController by inject()
     override val root = tabpane()
     private val dupes: DupeView by inject()
 
@@ -59,14 +58,14 @@ class MainView : View("Pics") {
 class DiffView : View() {
     private val exif: ExifView by inject()
     private val imgPath = SimpleStringProperty()
-    val pCont: PicsController by param()
-    val tv = tableview<UberFile> {
+    val pCont: PicCollectionsController by param()
+    val tv = tableview<CollectionsPerPic> {
         prefHeight = 1000.0
         asyncItems { pCont.diffs }
         columnResizePolicy = SmartResize.POLICY
-        readonlyColumn("File", UberFile::filePath).prefWidth(320)
+        readonlyColumn("File", CollectionsPerPic::filePath).prefWidth(320)
         for (v in pCont.allPicLibs) {
-            readonlyColumn(v.baseStr!!, UberFile::basePaths).minWidth(
+            readonlyColumn(v.baseStr!!, CollectionsPerPic::basePaths).minWidth(
                     150.0).cellFormat { bPaths ->
                 if (bPaths.contains(v.baseStr)) {
                     text = "present"
@@ -81,7 +80,7 @@ class DiffView : View() {
                 }
             }
         }
-        bindSelected(pCont.uberFileModel)
+        bindSelected(pCont.collectionsPerPicModel)
         onSelectionChange { sel ->
             imgV.image = null
             pCont.allPicLibs.forEach { picL ->
@@ -95,20 +94,14 @@ class DiffView : View() {
             }
         }
     }
-    val imgV = imageview() {
+    private val imgV = imageview() {
         isPreserveRatio = true
-
-
         exif.xCont.pathProp.bind(imgPath)
     }
-    val bottomPane = splitpane(Orientation.HORIZONTAL) {
+    private val bottomPane = splitpane(Orientation.HORIZONTAL) {
         setDividerPosition(0, .35)
         fitToParentSize()
         add(exif)
-//        add(pane {
-//            fitToParentSize()
-//            add(exif)
-//        })
         add(pane {
             fitToParentSize()
             prefWidth(1500.0)
@@ -122,13 +115,14 @@ class DiffView : View() {
     }
 
     init {
-        tv.selectFirst()
+        tv.selectionModel.clearAndSelect(1)
+//        tv.selectionModel.selectFirst()
 //        imgV.fitHeightProperty().bind(bottomPane.heightProperty())
     }
 }
 
 class DBForm : View() {
-    val pCont: PicsController by param()
+    val pCont: PicCollectionsController by param()
     override val root = form()
     private var dbs = fieldset("Lightroom database files")
     private var files = fieldset("Directories with image files")
@@ -168,14 +162,13 @@ class DBForm : View() {
 /**
  * Aggregates picture paths from all sources into one data structure
  */
-data class UberFile(
+data class CollectionsPerPic(
         var filePath: String,
         var basePaths: ConcurrentSkipListSet<String?> // which piclibs have this file
-                   )
+                            )
 
-class UberFileModel : ItemViewModel<UberFile>() {
-    val filePath = bind(UberFile::filePath)
-//    val basePaths = bind(UberFile::basePaths)
+class CollectionsPerPicModel : ItemViewModel<CollectionsPerPic>() {
+    val filePath = bind(CollectionsPerPic::filePath)
 }
 
 /**
@@ -221,48 +214,44 @@ class PicFileModel : JsonModel {
 /**
  * All the data manipulation heavy lifting
  */
-class PicsController : Controller() {
+class PicCollectionsController : Controller() {
+    // array of each of pic collection of any type in use in the app
     internal val allPicLibs = ArrayList<AbstractPicCollection>()
-    val uberFileModel = UberFileModel()
-    private var uberMap = ConcurrentHashMap<String, UberFile>()
-    var diffs = ArrayList<UberFile>().observable()
-    lateinit var picdbs: JsonArray
-    lateinit var picFiles: JsonArray
+    val collectionsPerPicModel = CollectionsPerPicModel()
+    private var collectionsPerPic = ConcurrentHashMap<String, CollectionsPerPic>()
+    var diffs = ArrayList<CollectionsPerPic>().observable()
     fun loadDupes() {
-        log.info("Loading")
-        loadPicConfig()
+        log.fine("Looking for duplicates")
         allPicLibs.parallelStream().forEach { p ->
-            log.info("Loading ${p.baseStr}")
+            log.fine("   Checking ${p.baseStr}")
             p.relativePaths.parallelStream().forEach { pathVal ->
-                var pathValXPlatform = pathVal
-//                if (File.separatorChar == '\\') {
-//                    pathValXPlatform = pathVal?.replace(File.separatorChar, '/')
-//                }
-                val exist = pathValXPlatform?.let {
-                    uberMap.putIfAbsent(it,
-                                        UberFile(pathValXPlatform,
-                                                 ConcurrentSkipListSet(setOf(p.baseStr))))
+                val exist = pathVal?.let {
+                    collectionsPerPic.putIfAbsent(it,
+                                                  CollectionsPerPic(pathVal,
+                                                                    ConcurrentSkipListSet(setOf(p.baseStr))))
                 }
                 exist?.let {
-                    uberMap[pathValXPlatform]!!.basePaths.add(p.baseStr)
+                    collectionsPerPic[pathVal]!!.basePaths.add(p.baseStr)
                 }
             }
-            diffs = ArrayList(uberMap.values).observable() // update table after each "column"
-            log.info("----- Done: ${p.baseStr}")
+            diffs = ArrayList(collectionsPerPic.values).observable() // update table after each "column"
+            log.fine("----- Done: ${p.baseStr}")
         }
-        log.info("-----====  DUPE LOADING COMPLETE")
+        log.fine("-----====  DUPE LOADING COMPLETE")
     }
 
     init {
+        loadPicConfig()
         loadDupes()
     }
 
     private fun loadPicConfig() {
-        val theapp = app
+        var picdbs: JsonArray = app.config.jsonArray("lightroomDbs")!!
+        lateinit var picFiles: JsonArray
         if (!app.config.containsKey("lightroomDbs")) {
             createConfig(app)
         } else {
-            println("No property file detected")
+            log.warning("No property file detected")
             val ex = """
 lightroomDbs=[{"path"\:"g\:\\\\Dropbox\\\\pic.db"},{"path"\:"c\:\\\\Temp\\\\Lightroom Catalog.lrcat"}]
 localdirs=["g\:\\\\Dropbox\\\\Photos\\\\pics"]
@@ -270,18 +259,17 @@ localdirs=["g\:\\\\Dropbox\\\\Photos\\\\pics"]
             println("Create conf/[hostname]/app.properties with contents like")
             println(ex)
         }
-        picdbs = app.config.jsonArray("lightroomDbs")!!
-        picdbs?.let { jsonArray ->
+        picdbs.let { jsonArray ->
             for (dbPath in jsonArray) {
                 dbPath.asJsonObject().toModel<PicDBModel>().pdb?.let { allPicLibs.add(it) }
             }
         }
-        picFiles = app.config.jsonArray("localDirs")!!
-        if (picFiles == null) {
-            log.warning("No local paths specified")
-        } else for (path in picFiles) {
-            path.asJsonObject().toModel<PicFileModel>().pf?.let { picFiles1 -> allPicLibs.add(picFiles1) }
-        }
+        app.config.jsonArray("localDirs")?.let {
+            picFiles = it
+            for (path in picFiles) {
+                path.asJsonObject().toModel<PicFileModel>().pf?.let { picFiles1 -> allPicLibs.add(picFiles1) }
+            }
+        } ?: log.warning("No local paths specified")
     }
 }
 
@@ -296,8 +284,6 @@ fun createConfig(app: App) {
         two = "c:\\Temp\\Lightroom Catalog.lrcat"
         three = "g:\\Dropbox\\Photos\\pics"
     }
-//        lightroomDbs=[{"path"\:"g\:\\\\Dropbox\\\\pic.db"},{"path"\:"c\:\\\\Temp\\\\Lightroom Catalog.lrcat"}]
-//        localDirs=[{"path"\:"g\:\\\\Dropbox\\\\Photos\\\\pics"}]
     val pm1 = PicDBModel()
     pm1.pdb = LightroomDB(one)
     val pm2 = PicDBModel()
@@ -311,7 +297,6 @@ fun createConfig(app: App) {
         set("localDirs" to Json.createArrayBuilder().add(pfm1.toJSON().asJsonObject()).build())
         save()
     }
-    println("Config complete")
 }
 
 class PicsFragment : Fragment() {
@@ -351,27 +336,27 @@ class DupeView : View() {
 }
 
 class DupeController : Controller() {
-    private val logger = KotlinLogging.logger {}
-    private val picsCont: PicsController by inject()
+    private val picCollectionsCont: PicCollectionsController by inject()
     private val dupesProperty = SimpleObjectProperty<HashSet<HashSet<String>>>()
     private var dupes by dupesProperty
     var doneSearching = SimpleBooleanProperty(false)
     var dupeStrings = ArrayList<String>().observable()
     private var pf: LocalPicFiles? = null
+    var justFiles = picCollectionsCont.allPicLibs.filter { it is LocalPicFiles }.map { it as LocalPicFiles}
 
     init {
         runAsync {
-            picsCont.picFiles?.first()?.asJsonObject()?.toModel<PicFileModel>()?.pf?.let {
-                logger.info("Looking for dupes")
-                pf = it
-                dupes = it.getDupes()
-            }
+            //  picsCont.picFiles?.first()?.asJsonObject()?.toModel<PicFileModel>()?.pf?.let {
+            //
+            pf = justFiles.first() as LocalPicFiles
+            log.info("Looking for dupes")
+            dupes = pf?.getDupes()
+        } ui {
             pf?.let {
                 dupeStrings.addAll(it.getDupeFileList())
             }
             doneSearching.set(true)
-            logger.info("done looking for dupes")
-        } ui { _ ->
+            log.info("done looking for dupes")
         }
     }
 }
