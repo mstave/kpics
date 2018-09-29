@@ -1,71 +1,108 @@
-
-
-import kpics.LightroomDB
-import kpics.LocalPicFiles
+import kotlinx.coroutines.experimental.async
+import kotlinx.coroutines.experimental.runBlocking
+import kpics.*
 import mu.KotlinLogging
+import org.apache.logging.log4j.Level
+import org.apache.logging.log4j.core.config.Configurator
 import org.jetbrains.exposed.sql.select
-import org.jetbrains.exposed.sql.transactions.transaction
-import org.junit.jupiter.api.Assertions
+import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Assertions.*
-import org.junit.jupiter.api.Test
-import tornadofx.*
 import java.io.File
 import java.nio.file.Path
 import java.nio.file.Paths
 
+@TestInstance(org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS)
 internal class LightroomDBTest {
     private val logger = KotlinLogging.logger {}
+    private lateinit var sampleDB: LightroomDB
+    private val sampleDBPath = System.getProperty("user.dir") +
+                               File.separator + "testdata" + File.separator + "testpics" +
+                               File.separator + "testpics.lrcat"
 
-    companion object {
-        const val testPicsPath = "/Users/mstave/Dropbox/Photos/testPicsPath/"
-        val dropbox : String
-        get() {
-            var guess = "/Users/mstave/Dropbox"
-            if (!File(guess).exists()) {
-                guess = "/mnt/g/Dropbox"
+    companion object { // so KPicsTest can aggregate
+        private val dropbox: String
+            get() {
+                var guess = "/Users/mstave/Dropbox"
+                if (!File(guess).exists()) {
+                    guess = "/mnt/g/Dropbox"
+                }
+                if (!File(guess).exists()) {
+                    guess = "g:\\Dropbox"
+                }
+                return guess
             }
-            if (!File(guess).exists()) {
-                guess = "g:\\Dropbox"
-            }
-            return guess
-        }
-        fun getTestPics(): LightroomDB {
+
+        fun getCustomTestPics(): LightroomDB {
+            // works with my personal pics
             val filename = java.io.File("$dropbox/pic.db").absolutePath
+            Assumptions.assumeTrue(File(filename).exists())
             return LightroomDB(filename)
         }
     }
 
-    // TODO replace weak-ass println tests with asserts with testdata
+    @BeforeAll
+    fun setupSample() {
+        Configurator.setLevel(LocalPicFiles::class.simpleName, Level.DEBUG)
+        Configurator.setLevel("Exposed", Level.INFO) // JDBC stuff can be chatty
+
+        sampleDB = LightroomDB(sampleDBPath)
+    }
+
     @Test
     fun relPaths() {
-        val db = getTestPics()
-        print(db.relativePaths.first())
-
+        assertEquals("2016-02-23 07.57.33.png", sampleDB.relativePaths.first())
     }
+
+    @Test
+    fun sampleDBconcurrency() {
+        val first = async {
+            sampleDB.xact {
+                logger.info(sampleDB.getAll().first().toString())
+            }
+        }
+        val second = async {
+            sampleDB.getAll()
+        }
+        runBlocking {
+            first.await()
+            second.await()
+        }
+    }
+
+    @Test
+    fun testConcurrency() {
+        val first = async {
+            sampleDB.xact {
+                logger.info(sampleDB.getAll().first().toString())
+            }
+        }
+        val second = async {
+            val f: LightroomDB = getCustomTestPics()
+            f.getAll()
+        }
+        runBlocking {
+            first.await()
+            second.await()
+        }
+    }
+
     @Test
     fun basePathStr() {
-        println(getTestPics().baseStr)
+        assertEquals(sampleDBPath, sampleDB.baseStr)
     }
 
     @Test
-    fun testlocDBRel() {
-        val localdbFile = java.io.File("$dropbox/pic.db").absolutePath
-        val db = LightroomDB(localdbFile)
-        print(db.relativePaths.observable())
-        print(db.count)
-        assertTrue(db.relativePaths.size > 0)
-
-    }
-
-    @Test
-    fun totalPics() {
+    fun sampleHasFiles() {
+        assertTrue(sampleDB.relativePaths.size > 0)
     }
 
     @Test
     fun transact() {
+        sampleDB.xact {
+        }
     }
 
-    @org.junit.jupiter.api.Test
+    @Test
     fun bogusDBIsBogus() {
         val exception = assertThrows(IllegalArgumentException::class.java) {
             val bogus = LightroomDB("bogus.db")
@@ -74,16 +111,16 @@ internal class LightroomDBTest {
         println(exception)
     }
 
-    @org.junit.jupiter.api.Test
+    @Test
     fun getNewPicDB() {
-        assertNotNull(getTestPics())
+        assertNotNull(getCustomTestPics())
     }
 
-    @org.junit.jupiter.api.Test
+    @Test
     fun hasRows() {
-        val db = getTestPics()
+        val db = getCustomTestPics()
         db.xact {
-            assertTrue(LightroomDB.LibFile.find { LightroomDB.AgLibraryFile.extension eq "MP4" }.count() > 0)
+            assertTrue(LibFile.find { AgLibraryFile.extension eq "MP4" }.count() > 0)
         }
     }
 
@@ -93,64 +130,58 @@ internal class LightroomDBTest {
 
     @Test
     fun example() {
-        val db = getTestPics()
+        val db = getCustomTestPics()
         db.xact {
-            val folderQ = LightroomDB.LibFolder.wrapRows(
-                    LightroomDB.AgLibraryFolder.innerJoin(LightroomDB.AgLibraryFile).select { LightroomDB.AgLibraryFile.extension eq "MP4" }
-                                                        ).toList().distinct()
+            val folderQ = LibFolder.wrapRows(
+                    AgLibraryFolder.innerJoin(
+                            AgLibraryFile).select { AgLibraryFile.extension eq "MP4" }
+                                            ).toList().distinct()
             logger.debug("Folder: " + folderQ.toString())
             folderQ.forEach { logger.debug(it.toString()) }
-            val fileQ = LightroomDB.LibFile.wrapRows(
-                    LightroomDB.AgLibraryFolder.innerJoin(LightroomDB.AgLibraryFile).select { LightroomDB.AgLibraryFile.extension eq "MP4" }
-                                                    ).toList()
+            val fileQ = LibFile.wrapRows(
+                    AgLibraryFolder.innerJoin(
+                            AgLibraryFile).select { AgLibraryFile.extension eq "MP4" }
+                                        ).toList()
             logger.debug("File: " + fileQ.toString())
         }
     }
 
     @Test
     fun testGetRel() {
-        val it: Path = getTestPics().paths.last()
+        val it: Path = getCustomTestPics().paths.last()
         val localF = LocalPicFiles("$dropbox/Photos/pics")
         val pathVal = Paths.get(
                 it.fileName.toString().replace(
                         (localF.baseStr), ""))
         println(pathVal)
-        println(getTestPics().paths.last())
+        println(getCustomTestPics().paths.last())
     }
+
     @Test
     fun containsRelPathTest() {
-        val f: LightroomDB = getTestPics()
+        val f: LightroomDB = getCustomTestPics()
         println(f.containsRelPath(Paths.get("1980/February/0728101523-00.jpg")))
-
     }
 
     @Test
-    fun testchecksum() {
-//        org.junit.jupiter.api.fail ("implement me")
-//        org.junit.jupiter.api.Assumptions.assumeTrue(false)
-    }
-    @Test
-    fun pathTest() {
-        val p = Paths.get("foo/bar/baz.txt")
-        println(p.fileName)
-        println(p.parent)
-        println(p.root)
-        println(p.normalize())
-        println(p.subpath(0, 1))
-        println(p - Paths.get("foo"))
+    fun testDate() {
+        val f: LightroomDB = getCustomTestPics()
+        val a = f.getAll().first().externalModDateTime
+        val b = f.getAll().first().modDateTime
+        logger.info("$a $b")
     }
 
     @Test
     fun testContainsName() {
-        val f: LightroomDB = getTestPics()
+        val f: LightroomDB = getCustomTestPics()
         print(f.containsName("DSC00665.ARW"))
     }
 
     @Test
     fun testGetFullPath() {
-        val f: LightroomDB = getTestPics()
+        val f: LightroomDB = getCustomTestPics()
 //        print(f.getFullPath("DSC00665.ARW"))
-        val first = f.getAll()!!.first()
+        val first = f.getAll().first()
         val firstName = first.baseName + "." +
                         first.extension
         print(firstName)
@@ -159,43 +190,47 @@ internal class LightroomDBTest {
     }
 
     @Test
-    fun testContainsName2() {
-        val f: LightroomDB = getTestPics()
-        println(f.containsName("BILLROCK.JPG"))
-        println(f.containsName("WISESHOW.JPG"))
+    fun testContainsNameCustom() {
+        val f: LightroomDB = getCustomTestPics()
+        assertTrue(f.containsName("Lao.jpg"))
+        assertTrue(f.containsName("wiseshow.jpg"))
     }
 
     @Test
-    fun testContainsName3() {
-        val f: LightroomDB = getTestPics()
-        println(f.containsName("WISESHOW.JPG"))
+    fun containsName() {
+        logger.info(sampleDB.getAll().toString())
+        assertTrue(sampleDB.containsName("312.png"))
+        assertTrue(sampleDB.containsName("screen.jpg"))
     }
 
     @Test
     fun testPicDBCount() {
-        val f = getTestPics()
+        val f = getCustomTestPics()
         Assertions.assertNotEquals(0, f.count)
     }
 
     @Test
+    fun testSampleCount() {
+        assertEquals(4, sampleDB.getAll().size)
+        assertEquals(4, sampleDB.count)
+    }
+
+    @Test
     fun testGetAll() {
-        val f = getTestPics()
-        val t = f.getAll()
-        println(t?.count())
-        Assertions.assertNotEquals(0, f.getAll()?.count())
-        transaction {
-            Assertions.assertNotEquals(0, f.getAll()?.count())
-        }
+        val f = getCustomTestPics()
+        Assertions.assertNotEquals(0, f.getAll().count())
+    }
+
+    @Test
+    fun testFirstNotLast() {
+        assertNotEquals(sampleDB.getAll().first(), sampleDB.getAll().last())
     }
 
     @Test
     fun testToPathFromRoot() {
-        val f = getTestPics()
-        val first = f.getAll()?.last()
-        if (first != null) {
-            println(first.toPathFromRoot())
-        }
-
+        val f = getCustomTestPics()
+        val last = f.getAll().last()
+        assertEquals("stone/2018/2018-01-03/DSC00693.ARW",
+                     last.toPathFromRoot())
     }
-
 }

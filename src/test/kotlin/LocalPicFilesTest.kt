@@ -12,19 +12,24 @@ internal class LocalPicFilesTest {
     companion object {
         private val testPicsPath = System.getProperty("user.dir") +
                                    File.separator + "testdata" + File.separator + "pics"
-
+        private val testPF =  LocalPicFiles(testPicsPath)
         fun getTestPics(): LocalPicFiles {
-            return LocalPicFiles(testPicsPath)
+            return testPF
         }
     }
 
     @Test
     fun testGetDirsWithAllDupes() {
-        val test = getTestPics().getDirsWithAllDupes()
+        val theDupes = getTestPics().getDirsWithAllDupes()
 
-        assertNotNull(test)
-        assertEquals(1, test.size)
-        assertEquals("${testPicsPath + File.separator}rootdupe", test[0])
+//        println("${testPicsPath + File.separator}rootdupe")
+        assertNotNull(theDupes)
+        if (theDupes.size == 0) {
+            println(theDupes)
+            println(getTestPics().getDirStats())
+        }
+        assertEquals(1, theDupes.size)
+        assertEquals("${testPicsPath + File.separator}rootdupe", theDupes[0])
     }
 
     @Test

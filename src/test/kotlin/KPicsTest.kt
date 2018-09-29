@@ -15,7 +15,7 @@ import java.util.*
 class KPicsTest {
     companion object {
         fun getBothTestPics(): Pair<LocalPicFiles, LightroomDB> {
-            return Pair(LocalPicFilesTest.getTestPics(), LightroomDBTest.getTestPics())
+            return Pair(LocalPicFilesTest.getTestPics(), LightroomDBTest.getCustomTestPics())
         }
 
         fun getMD5(path: Path): String {

@@ -10,7 +10,7 @@ import tornadofx.*
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class DupeViewTest {
     private val logger = KotlinLogging.logger {}
-    var app = KGuiPics()
+    private var app = KGuiPics()
     @BeforeAll
     fun beforeAll() {
         System.setProperty("testfx.setup.timeout", "52500")

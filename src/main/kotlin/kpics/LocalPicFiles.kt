@@ -10,7 +10,6 @@ import java.nio.file.Paths
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentSkipListSet
-import java.util.zip.Adler32
 import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
 import kotlin.collections.set
@@ -100,6 +99,12 @@ class LocalPicFiles(private val basePathStr: String) : AbstractPicCollection() {
 
     fun getDirStats(): DirDupeStats { // path: totalFileCount, dupeFileCount
         val dupes = getDupes()
+        dupes?.forEach() { outer->
+            println ("-->")
+            outer.forEach {
+                println(it)
+            }
+        }
         val result = HashMap<String, Pair<Int, Int>>()
         filePaths.forEach { path ->
             result[path.parent.toString()] =
@@ -148,6 +153,7 @@ class LocalPicFiles(private val basePathStr: String) : AbstractPicCollection() {
     fun getDirsWithAllDupes(): ArrayList<String> {
         val retval = ArrayList<String>()
         val res = getDirStats()
+        println(res)
         res.forEach {
             if (it.value.first == it.value.second) {
                 retval.add(it.key)
@@ -166,8 +172,8 @@ class LocalPicFiles(private val basePathStr: String) : AbstractPicCollection() {
             return _dupeFiles
         val dupeSizes = getDupeSizes(filePaths)
         logger.info("Based upon size, dupe count: ${dupeSizes.size}")
-        val dupeMd5 = getDupeMd5(dupeSizes)
-        dupeMd5.values.parallelStream().forEach {
+        val dupeMd5  = getDupeMd5(dupeSizes)
+        dupeMd5.values.forEach {
             _dupeFiles.add(it.toHashSet())
         }
         logger.info("After checking MD5s of size-based dupes : ${dupeSizes.size}")
@@ -254,30 +260,13 @@ class LocalPicFiles(private val basePathStr: String) : AbstractPicCollection() {
                 }
             }
         }
-//        rootDupes.forEach {
-//            println("rm " + it.toString())
-//        }
     }
 }
 
-fun getChecksum(path: Path): String {
-    val checksum = Adler32()
-//    val checksum = CRC32()
-    val bytes = path.toFile().readBytes()
-    checksum.update(bytes, 0, bytes.size)
-    val lngChecksum = checksum.value
-
-    return "$lngChecksum"
-}
-
 fun getMD5(path: Path): String {
-    // 59 mins with MD2, 1366 dupes
-//    val md = java.security.MessageDigest.getInstance("SHA")
     val md = java.security.MessageDigest.getInstance("MD5")
+    // performance-wise the file IO swamps the md5 calc
     val bytes = md.digest(path.toFile().readBytes())
-//    var c = CharArray(10000)
-//    val read = path.toFile().reader().read(c, 0, 5000)
-//    val bytes = c as ByteArray
     var result = ""
     for (byte in bytes) {
         result += "%02x".format(byte)

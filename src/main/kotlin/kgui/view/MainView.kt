@@ -348,7 +348,7 @@ class DupeController : Controller() {
         runAsync {
             //  picsCont.picFiles?.first()?.asJsonObject()?.toModel<PicFileModel>()?.pf?.let {
             //
-            pf = justFiles.first() as LocalPicFiles
+            pf = justFiles.first()
             log.info("Looking for dupes")
             dupes = pf?.getDupes()
         } ui {
