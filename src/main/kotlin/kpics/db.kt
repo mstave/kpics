@@ -1,5 +1,5 @@
 package kpics
-
+/*
 const val query = """
     SELECT afile.ID_local,
 		  afile.ID_global,
@@ -14,7 +14,7 @@ const val query = """
 		  INNER JOIN main.kpics.AgLibraryRootFolder aroot
 			ON  afolder.rootFolder = aroot.ID_local
      """
-
+*/
 /*
 
 fun main(args: Array<String>) {

@@ -99,7 +99,7 @@ class LocalPicFiles(private val basePathStr: String) : AbstractPicCollection() {
 
     fun getDirStats(): DirDupeStats { // path: totalFileCount, dupeFileCount
         val dupes = getDupes()
-        dupes?.forEach() { outer->
+        dupes?.forEach { outer->
             println ("-->")
             outer.forEach {
                 println(it)
@@ -183,7 +183,7 @@ class LocalPicFiles(private val basePathStr: String) : AbstractPicCollection() {
 
     /**
      * Find dupes in a list of files based upon their size
-     * @param set of paths to files to be analyzed
+     * @param paths set of paths to files to be analyzed
      * @return map<file size,set<path str>>
      */
     private fun getDupeSizes(paths: Set<Path>):
@@ -217,7 +217,7 @@ class LocalPicFiles(private val basePathStr: String) : AbstractPicCollection() {
         val dupeMD5s = ConcurrentHashMap<String, ConcurrentSkipListSet<String>>()
         logger.info("starting MD5 check")
         // for each set of files that are of the same size
-        priorDupes.values.parallelStream().forEach() { pathList ->
+        priorDupes.values.parallelStream().forEach { pathList ->
             // different bucket of each unique filesize
             val md5s = ConcurrentHashMap<String, String>()
             pathList.parallelStream().forEach { pathStr ->
@@ -246,7 +246,7 @@ class LocalPicFiles(private val basePathStr: String) : AbstractPicCollection() {
         return ret
     }
 
-    fun RootDupes(
+    fun rootDupes(
             dupes: ConcurrentHashMap<String, ConcurrentSkipListSet<Path>>
                  ) {
         val rootDupes = ConcurrentSkipListSet<Path>()

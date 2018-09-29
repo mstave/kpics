@@ -1,5 +1,4 @@
-import kotlinx.coroutines.experimental.async
-import kotlinx.coroutines.experimental.runBlocking
+import kotlinx.coroutines.*
 import kpics.*
 import mu.KotlinLogging
 import org.apache.logging.log4j.Level
@@ -55,14 +54,14 @@ internal class LightroomDBTest {
 
     @Test
     fun sampleDBconcurrency() {
-        val first = async {
+        val first = GlobalScope.async(Dispatchers.Default, CoroutineStart.DEFAULT, null, {
             sampleDB.xact {
                 logger.info(sampleDB.getAll().first().toString())
             }
-        }
-        val second = async {
+        })
+        val second = GlobalScope.async(Dispatchers.Default, CoroutineStart.DEFAULT, null, {
             sampleDB.getAll()
-        }
+        })
         runBlocking {
             first.await()
             second.await()
@@ -71,15 +70,15 @@ internal class LightroomDBTest {
 
     @Test
     fun testConcurrency() {
-        val first = async {
+        val first = GlobalScope.async(Dispatchers.Default, CoroutineStart.DEFAULT, null, {
             sampleDB.xact {
                 logger.info(sampleDB.getAll().first().toString())
             }
-        }
-        val second = async {
+        })
+        val second = GlobalScope.async(Dispatchers.Default, CoroutineStart.DEFAULT, null, {
             val f: LightroomDB = getCustomTestPics()
             f.getAll()
-        }
+        })
         runBlocking {
             first.await()
             second.await()

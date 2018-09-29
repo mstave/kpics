@@ -59,7 +59,7 @@ class DiffView : View() {
     private val exif: ExifView by inject()
     private val imgPath = SimpleStringProperty()
     val pCont: PicCollectionsController by param()
-    val tv = tableview<CollectionsPerPic> {
+    private val tv = tableview<CollectionsPerPic> {
         prefHeight = 1000.0
         asyncItems { pCont.diffs }
         columnResizePolicy = SmartResize.POLICY
@@ -94,7 +94,7 @@ class DiffView : View() {
             }
         }
     }
-    private val imgV = imageview() {
+    private val imgV = imageview {
         isPreserveRatio = true
         exif.xCont.pathProp.bind(imgPath)
     }
@@ -220,7 +220,7 @@ class PicCollectionsController : Controller() {
     val collectionsPerPicModel = CollectionsPerPicModel()
     private var collectionsPerPic = ConcurrentHashMap<String, CollectionsPerPic>()
     var diffs = ArrayList<CollectionsPerPic>().observable()
-    fun loadDupes() {
+    private fun loadDupes() {
         log.fine("Looking for duplicates")
         allPicLibs.parallelStream().forEach { p ->
             log.fine("   Checking ${p.baseStr}")
@@ -246,7 +246,7 @@ class PicCollectionsController : Controller() {
     }
 
     private fun loadPicConfig() {
-        var picdbs: JsonArray = app.config.jsonArray("lightroomDbs")!!
+        val picdbs: JsonArray = app.config.jsonArray("lightroomDbs")!!
         lateinit var picFiles: JsonArray
         if (!app.config.containsKey("lightroomDbs")) {
             createConfig(app)
@@ -342,7 +342,7 @@ class DupeController : Controller() {
     var doneSearching = SimpleBooleanProperty(false)
     var dupeStrings = ArrayList<String>().observable()
     private var pf: LocalPicFiles? = null
-    var justFiles = picCollectionsCont.allPicLibs.filter { it is LocalPicFiles }.map { it as LocalPicFiles}
+    private var justFiles = picCollectionsCont.allPicLibs.filter { it is LocalPicFiles }.map { it as LocalPicFiles}
 
     init {
         runAsync {
@@ -352,8 +352,8 @@ class DupeController : Controller() {
             log.info("Looking for dupes")
             dupes = pf?.getDupes()
         } ui {
-            pf?.let {
-                dupeStrings.addAll(it.getDupeFileList())
+            pf?.let { picf ->
+                dupeStrings.addAll(picf.getDupeFileList())
             }
             doneSearching.set(true)
             log.info("done looking for dupes")

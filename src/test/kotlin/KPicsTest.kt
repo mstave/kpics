@@ -18,15 +18,6 @@ class KPicsTest {
             return Pair(LocalPicFilesTest.getTestPics(), LightroomDBTest.getCustomTestPics())
         }
 
-        fun getMD5(path: Path): String {
-            val md = java.security.MessageDigest.getInstance("MD5")
-            val bytes = md.digest(path.toFile().readBytes())
-            var result = ""
-            for (byte in bytes) {
-                result += "%02x".format(byte)
-            }
-            return result
-        }
     }
 
     // TODO re-enable after adding sample db
@@ -42,7 +33,6 @@ class KPicsTest {
 
             Assertions.assertNotNull(firstF)
             Assertions.assertNotNull(firstD)
-//            val md5FirstF = getMD5(firstF!!)
 //            Assertions.assertEquals(md5FirstF, getMD5(firstD!!))
 //            Assertions.assertEquals(firstF, firstD)
             var missingCount = 0

@@ -1,5 +1,4 @@
-import kotlinx.coroutines.experimental.async
-import kotlinx.coroutines.experimental.runBlocking
+import kotlinx.coroutines.*
 import kpics.LocalPicFiles
 import mu.KotlinLogging
 import org.junit.jupiter.api.Assertions.*
@@ -77,8 +76,8 @@ internal class LocalPicFilesTest {
     @Test
     fun testDupeMemoize() {
         val pf = getTestPics()
-        val d1 = async { pf.getDupes() }
-        val d2 = async { pf.getDupes() }
+        val d1 = GlobalScope.async(Dispatchers.Default, CoroutineStart.DEFAULT, null, { pf.getDupes() })
+        val d2 = GlobalScope.async(Dispatchers.Default, CoroutineStart.DEFAULT, null, { pf.getDupes() })
         runBlocking {
             println(d1.await()?.size)
             println(d2.await()?.size)
