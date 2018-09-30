@@ -23,6 +23,7 @@ import java.util.concurrent.ConcurrentSkipListSet
 import javax.json.Json
 import javax.json.JsonArray
 import javax.json.JsonObject
+import kotlin.system.measureTimeMillis
 
 class MainView : View("Pics") {
     private val logger: KLogger = KotlinLogging.logger {}
@@ -323,19 +324,17 @@ class DupeView : View() {
     val dupeC: DupeController by inject()
     override val root = scrollpane(true, true) {
         vbox {
-            text("Searching for duplicates, this may take a few minutes...") {
+            label("Searching for duplicates, this may take a few minutes...",progressindicator()) {
                 visibleWhen(!dupeC.doneSearching)
+                managedWhen(!dupeC.doneSearching)
             }
             listview<String> {
-                label("Dupicate files -------------")
-                text("TEXT Dupicate files")
                 prefWidth = 300.0
                 minHeight = 600.0
                 vgrow = Priority.ALWAYS
-                runAsyncWithProgress {
+                runAsync {
                     dupeC.updateDupes()
                 } ui {
-
                     items = dupeC.dupeStrings
                 }
             }
@@ -354,11 +353,11 @@ class DupeController : Controller() {
     private var pf: LocalPicFiles? = justFiles.first()
     fun updateDupes() {
         logger.info("Looking for dupes")
-        dupes = pf?.getDupes()
+        val duration = measureTimeMillis {dupes = pf?.getDupes() }
+        logger.info("done looking for dupes, took ${duration/1000} seconds")
         pf?.let { picf ->
             dupeStrings.addAll(picf.getDupeFileList())
         }
-        logger.info("done looking for dupes")
         doneSearching.set(true)
     }
 //    init {
