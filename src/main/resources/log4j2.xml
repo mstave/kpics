@@ -2,18 +2,24 @@
 <Configuration status="INFO">
     <Appenders>
         <Console name="Console" target="SYSTEM_OUT">
-            <PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n" />
+            <PatternLayout pattern="%d{HH:mm:ss.SSS} [%t] %-5level %logger{36} -- %msg%n"/>
         </Console>
-        <File name="MyFile" fileName="all.log" append="false">
+        <File name="all" fileName="all.log" append="false">
+            <PatternLayout pattern="%d{yyy-MM-dd HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
+        </File>
+        <File name="info" fileName="info.log" append="false">
             <PatternLayout pattern="%d{yyy-MM-dd HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n"/>
         </File>
     </Appenders>
     <Loggers>
         <Root level="debug">
-            <AppenderRef ref="Console" />
-            <AppenderRef ref="MyFile"/>
+            <AppenderRef ref="Console" level="warn"/>
+            <AppenderRef ref="all" level="debug"/>
+            <AppenderRef ref="info" level="info"/>
         </Root>
-        <Logger name="Exposed" level="WARN"/>
+        <Logger name="Exposed" level="debug">
+            <AppenderRef ref="all" level="debug"/>
+        </Logger>
 
     </Loggers>
 </Configuration>

@@ -12,6 +12,8 @@ import kgui.exif.ExifView
 import kpics.AbstractPicCollection
 import kpics.LightroomDB
 import kpics.LocalPicFiles
+import mu.KLogger
+import mu.KotlinLogging
 import tornadofx.*
 import java.io.File
 import java.net.InetAddress
@@ -23,11 +25,13 @@ import javax.json.JsonArray
 import javax.json.JsonObject
 
 class MainView : View("Pics") {
+    private val logger: KLogger = KotlinLogging.logger {}
     private val controller: PicCollectionsController by inject()
     override val root = tabpane()
     private val dupes: DupeView by inject()
 
     init {
+        logger.debug("MainView init")
         with(root) {
             tab("Setup") {
                 this += find<DBForm>(DBForm::pCont to controller)
@@ -123,13 +127,14 @@ class DiffView : View() {
 
 class DBForm : View() {
     val pCont: PicCollectionsController by param()
+    private val logger: KLogger = KotlinLogging.logger {}
     override val root = form()
     private var dbs = fieldset("Lightroom database files")
     private var files = fieldset("Directories with image files")
 
     init {
         pCont.allPicLibs.forEach { picL ->
-            log.info("Adding ${picL.baseStr}")
+            logger.info("Adding ${picL.baseStr}")
             when (picL) {
                 is LightroomDB   -> dbs.add(field {
                     textfield { bind(picL.baseStr.toProperty()) }
@@ -216,12 +221,13 @@ class PicFileModel : JsonModel {
  */
 class PicCollectionsController : Controller() {
     // array of each of pic collection of any type in use in the app
+    private val logger: KLogger = KotlinLogging.logger {}
     internal val allPicLibs = ArrayList<AbstractPicCollection>()
     val collectionsPerPicModel = CollectionsPerPicModel()
     private var collectionsPerPic = ConcurrentHashMap<String, CollectionsPerPic>()
     var diffs = ArrayList<CollectionsPerPic>().observable()
     private fun loadDupes() {
-        log.fine("Looking for duplicates")
+        logger.debug("Looking for duplicates")
         allPicLibs.parallelStream().forEach { p ->
             log.fine("   Checking ${p.baseStr}")
             p.relativePaths.parallelStream().forEach { pathVal ->
@@ -235,9 +241,9 @@ class PicCollectionsController : Controller() {
                 }
             }
             diffs = ArrayList(collectionsPerPic.values).observable() // update table after each "column"
-            log.fine("----- Done: ${p.baseStr}")
+            logger.debug("----- Done: ${p.baseStr}")
         }
-        log.fine("-----====  DUPE LOADING COMPLETE")
+        logger.debug("-----====  DUPE LOADING COMPLETE")
     }
 
     init {
@@ -251,7 +257,7 @@ class PicCollectionsController : Controller() {
         if (!app.config.containsKey("lightroomDbs")) {
             createConfig(app)
         } else {
-            log.warning("No property file detected")
+            logger.warn("No property file detected")
             val ex = """
 lightroomDbs=[{"path"\:"g\:\\\\Dropbox\\\\pic.db"},{"path"\:"c\:\\\\Temp\\\\Lightroom Catalog.lrcat"}]
 localdirs=["g\:\\\\Dropbox\\\\Photos\\\\pics"]
@@ -269,7 +275,7 @@ localdirs=["g\:\\\\Dropbox\\\\Photos\\\\pics"]
             for (path in picFiles) {
                 path.asJsonObject().toModel<PicFileModel>().pf?.let { picFiles1 -> allPicLibs.add(picFiles1) }
             }
-        } ?: log.warning("No local paths specified")
+        } ?: logger.warn("No local paths specified")
     }
 }
 
@@ -314,21 +320,23 @@ class PicsFragment : Fragment() {
 }
 
 class DupeView : View() {
-    override val root = scrollpane(true, true)
     val dupeC: DupeController by inject()
-    private var msg = text("Searching for duplicates, this may take a few minutes...")
+    override val root = scrollpane(true, true) {
+        vbox {
+            text("Searching for duplicates, this may take a few minutes...") {
+                visibleWhen(!dupeC.doneSearching)
+            }
+            listview<String> {
+                label("Dupicate files -------------")
+                text("TEXT Dupicate files")
+                prefWidth = 300.0
+                minHeight = 600.0
+                vgrow = Priority.ALWAYS
+                runAsyncWithProgress {
+                    dupeC.updateDupes()
+                } ui {
 
-    init {
-        with(root) {
-            vbox {
-                msg.visibleWhen(!dupeC.doneSearching)
-                this.add(msg)
-
-                listview<String> {
-                    prefWidth = 300.0
-                    minHeight = 600.0
                     items = dupeC.dupeStrings
-                    vgrow = Priority.ALWAYS
                 }
             }
         }
@@ -336,27 +344,31 @@ class DupeView : View() {
 }
 
 class DupeController : Controller() {
+    private val logger: KLogger = KotlinLogging.logger {}
     private val picCollectionsCont: PicCollectionsController by inject()
     private val dupesProperty = SimpleObjectProperty<HashSet<HashSet<String>>>()
     private var dupes by dupesProperty
     var doneSearching = SimpleBooleanProperty(false)
     var dupeStrings = ArrayList<String>().observable()
-    private var pf: LocalPicFiles? = null
-    private var justFiles = picCollectionsCont.allPicLibs.filter { it is LocalPicFiles }.map { it as LocalPicFiles}
-
-    init {
-        runAsync {
-            //  picsCont.picFiles?.first()?.asJsonObject()?.toModel<PicFileModel>()?.pf?.let {
-            //
-            pf = justFiles.first()
-            log.info("Looking for dupes")
-            dupes = pf?.getDupes()
-        } ui {
-            pf?.let { picf ->
-                dupeStrings.addAll(picf.getDupeFileList())
-            }
-            doneSearching.set(true)
-            log.info("done looking for dupes")
+    private var justFiles = picCollectionsCont.allPicLibs.filter { it is LocalPicFiles }.map { it as LocalPicFiles }
+    private var pf: LocalPicFiles? = justFiles.first()
+    fun updateDupes() {
+        logger.info("Looking for dupes")
+        dupes = pf?.getDupes()
+        pf?.let { picf ->
+            dupeStrings.addAll(picf.getDupeFileList())
         }
+        logger.info("done looking for dupes")
+        doneSearching.set(true)
     }
+//    init {
+//        runAsync {
+//            //  picsCont.picFiles?.first()?.asJsonObject()?.toModel<PicFileModel>()?.pf?.let {
+//            //
+//            pf = justFiles.first()
+//        } ui {
+//
+//
+//        }
+//    }
 }
