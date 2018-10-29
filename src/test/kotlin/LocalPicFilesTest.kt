@@ -2,6 +2,7 @@ import kotlinx.coroutines.*
 import kpics.LocalPicFiles
 import mu.KotlinLogging
 import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.junit.jupiter.api.Test
 import java.io.File
 
@@ -37,6 +38,15 @@ internal class LocalPicFilesTest {
         assertNotNull(dupes)
         assertEquals(2, dupes!!.size)
     }
+    @Test
+    fun myTestDupes() {
+        val myPath = "/Users/mstave/Dropbox/photos/pics"
+        assumeTrue(File(myPath).exists())
+        val dupes = LocalPicFiles(myPath).getDupes()
+        assertNotNull(dupes)
+        assertEquals(1369, dupes!!.size)
+//        assertEquals(2, dupes!!.size)
+    }
 
     @Test
     fun testGetProviders() {
@@ -49,7 +59,7 @@ internal class LocalPicFilesTest {
     }
 
    @Test
-    fun testMD5sUnique() {
+    fun testChecksumUnique() {
         val pics = getTestPics()
         val dupe = pics.getDupes()
         assertNotNull(dupe)
@@ -96,7 +106,7 @@ internal class LocalPicFilesTest {
 
     @Test
     fun testGetDupeFileList() {
-        println(getTestPics().getDupeFileList())
+        assertEquals(6, getTestPics().getDupeFileList()?.size)
     }
 
     @Test
@@ -129,7 +139,7 @@ internal class LocalPicFilesTest {
 
     @Test
     fun testWin() {
-        org.junit.jupiter.api.Assumptions.assumeTrue(System.getProperty("os.name").startsWith("Windows"))
+        assumeTrue(System.getProperty("os.name").startsWith("Windows"))
 
     }
 

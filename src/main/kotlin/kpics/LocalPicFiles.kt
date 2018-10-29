@@ -3,7 +3,7 @@ package kpics
 import mu.KLogger
 import mu.KotlinLogging
 import org.jetbrains.exposed.sql.transactions.transaction
-import java.io.File
+import java.io.*
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -99,8 +99,8 @@ class LocalPicFiles(private val basePathStr: String) : AbstractPicCollection() {
 
     fun getDirStats(): DirDupeStats { // path: totalFileCount, dupeFileCount
         val dupes = getDupes()
-        dupes?.forEach { outer->
-            println ("-->")
+        dupes?.forEach { outer ->
+            println("-->")
             outer.forEach {
                 println(it)
             }
@@ -172,7 +172,7 @@ class LocalPicFiles(private val basePathStr: String) : AbstractPicCollection() {
             return _dupeFiles
         val dupeSizes = getDupeSizes(filePaths)
         logger.info("Based upon size, dupe count: ${dupeSizes.size}")
-        val dupeMd5  = getDupeMd5(dupeSizes)
+        val dupeMd5 = getDupeMd5(dupeSizes)
         dupeMd5.values.forEach {
             _dupeFiles.add(it.toHashSet())
         }
@@ -187,7 +187,7 @@ class LocalPicFiles(private val basePathStr: String) : AbstractPicCollection() {
      * @return map<file size,set<path str>>
      */
     private fun getDupeSizes(paths: Set<Path>):
-           HashMap<Long, ConcurrentSkipListSet<String>> {
+            HashMap<Long, ConcurrentSkipListSet<String>> {
         val sizes = ConcurrentHashMap<Long, String>() // <file length> -> <file path with that length>
         val dupeSizes = ConcurrentHashMap<Long, ConcurrentSkipListSet<String>>() // <file length> -> <set of paths>
         logger.info("starting first pass for dupes, by size")
@@ -221,7 +221,7 @@ class LocalPicFiles(private val basePathStr: String) : AbstractPicCollection() {
             // different bucket of each unique filesize
             val md5s = ConcurrentHashMap<String, String>()
             pathList.parallelStream().forEach { pathStr ->
-                val md5 = getMD5(Paths.get(pathStr))
+                val md5 = calculateHash(Paths.get(pathStr).toFile())
                 val existingMD5 = md5s.putIfAbsent(md5, pathStr)
                 if (existingMD5 != null) {
                     val doesExistMD5 =
@@ -237,13 +237,8 @@ class LocalPicFiles(private val basePathStr: String) : AbstractPicCollection() {
         return HashMap(dupeMD5s)
     }
 
-    fun getDupeFileList(): ArrayList<String> {
-        val ret = ArrayList<String>()
-        getDupes()?.flatten()?.forEach {
-            ret.add("$it : ${getDupesForFile(it)}")
-        }
-        ret.sort()
-        return ret
+    fun getDupeFileList(): List<String>? {
+        return getDupes()?.flatten()?.map { "$it : ${getDupesForFile(it)}" }?.sorted()
     }
 
     fun rootDupes(
@@ -263,9 +258,41 @@ class LocalPicFiles(private val basePathStr: String) : AbstractPicCollection() {
     }
 }
 
+fun calculateHash(updateFile: File): String {
+    var hash = ""
+    val istream: InputStream
+    try {
+        istream = FileInputStream(updateFile)
+    } catch (e: FileNotFoundException) {
+        println("Exception while getting digest for ${updateFile.name}: $e")
+        return ""
+    }
+    val buffer = ByteArray(  256 * 1024)
+    var amtRead: Int
+    try {
+        do {
+            amtRead = istream.read(buffer)
+            if (amtRead <= 0) {
+                break
+            }
+            hash += buffer.contentHashCode().toString()
+        } while (true)
+        return hash
+    } catch (e: IOException) {
+        throw RuntimeException("Error reading ${updateFile.name}", e)
+    } finally {
+        try {
+            istream.close()
+        } catch (e: IOException) {
+            println("Exception while getting digest$e")
+        }
+    }
+}
+
+
+
 fun getMD5(path: Path): String {
     val md = java.security.MessageDigest.getInstance("MD5")
-    // performance-wise the file IO swamps the md5 calc
     val bytes = md.digest(path.toFile().readBytes())
     var result = ""
     for (byte in bytes) {
@@ -273,6 +300,7 @@ fun getMD5(path: Path): String {
     }
     return result
 }
+
 
 var dbpaths = java.util.concurrent.ConcurrentSkipListSet<Path>()
 fun main(args: Array<String>) {

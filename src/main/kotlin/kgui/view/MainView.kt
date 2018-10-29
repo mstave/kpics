@@ -25,6 +25,8 @@ import javax.json.JsonArray
 import javax.json.JsonObject
 import kotlin.system.measureTimeMillis
 
+
+
 class MainView : View("Pics") {
     private val logger: KLogger = KotlinLogging.logger {}
     private val controller: PicCollectionsController by inject()
@@ -39,11 +41,14 @@ class MainView : View("Pics") {
             }
             tab("All") {
                 splitpane(Orientation.HORIZONTAL) {
-                    setDividerPositions(0.33, 0.66)
                     prefWidth = 1200.0
                     minHeight = 500.0
                     for (v in controller.allPicLibs) {
                         this += find<PicsFragment>(mapOf(PicsFragment::picObj to v))
+                    }
+                    // even out dividers, weird that this seems to be needed
+                    for (i in 0 until dividers.size) {
+                        dividers[i].position = (1.0 + i) / (dividers.size + 1)
                     }
                 }
             }
@@ -316,15 +321,14 @@ class PicsFragment : Fragment() {
         vgrow = Priority.ALWAYS
     }
     override val root = VBox(picObj.baseStr?.let { label(it) }, lview,
-                             label("Count: " + picObj.count + "\tName: " + picObj.toString())
-                            )
+                             label("Count: " + picObj.count + "\tName: " + picObj.toString()))
 }
 
 class DupeView : View() {
     val dupeC: DupeController by inject()
     override val root = scrollpane(true, true) {
         vbox {
-            label("Searching for duplicates, this may take a few minutes...",progressindicator()) {
+            label("Searching for duplicates, this may take a few minutes...", progressindicator()) {
                 visibleWhen(!dupeC.doneSearching)
                 managedWhen(!dupeC.doneSearching)
             }
@@ -353,21 +357,9 @@ class DupeController : Controller() {
     private var pf: LocalPicFiles? = justFiles.first()
     fun updateDupes() {
         logger.info("Looking for dupes")
-        val duration = measureTimeMillis {dupes = pf?.getDupes() }
-        logger.info("done looking for dupes, took ${duration/1000} seconds")
-        pf?.let { picf ->
-            dupeStrings.addAll(picf.getDupeFileList())
-        }
+        val duration = measureTimeMillis { dupes = pf?.getDupes() }
+        logger.info("done looking for dupes, took ${duration / 1000} seconds")
+        pf?.getDupeFileList()?.let { dupeStrings.addAll(it) }
         doneSearching.set(true)
     }
-//    init {
-//        runAsync {
-//            //  picsCont.picFiles?.first()?.asJsonObject()?.toModel<PicFileModel>()?.pf?.let {
-//            //
-//            pf = justFiles.first()
-//        } ui {
-//
-//
-//        }
-//    }
 }
