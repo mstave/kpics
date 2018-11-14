@@ -40,7 +40,11 @@ internal class LocalPicFilesTest {
     }
     @Test
     fun myTestDupes() {
-        val myPath = "/Users/mstave/Dropbox/photos/pics"
+        var myPath = "/Users/mstave/Dropbox/photos/pics"
+        if (System.getProperty("os.name").startsWith("Windows")) {
+            myPath = "f:/Dropbox.old/photos/pics"
+
+        }
         assumeTrue(File(myPath).exists())
         val dupes = LocalPicFiles(myPath).getDupes()
         assertNotNull(dupes)

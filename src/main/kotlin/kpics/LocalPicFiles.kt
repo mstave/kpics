@@ -172,7 +172,7 @@ class LocalPicFiles(private val basePathStr: String) : AbstractPicCollection() {
             return _dupeFiles
         val dupeSizes = getDupeSizes(filePaths)
         logger.info("Based upon size, dupe count: ${dupeSizes.size}")
-        val dupeMd5 = getDupeMd5(dupeSizes)
+        val dupeMd5 = getDupeHash(dupeSizes)
         dupeMd5.values.forEach {
             _dupeFiles.add(it.toHashSet())
         }
@@ -212,15 +212,17 @@ class LocalPicFiles(private val basePathStr: String) : AbstractPicCollection() {
      * @param priorDupes input hashmap of <<filesize -> list of files of that size>>
      * @return <<md5value1 : <fileA, fileB>>,<md5value2 : <fileC, fileD, fileE>>>
      */
-    private fun getDupeMd5(priorDupes: Map<Long, ConcurrentSkipListSet<String>>):
+    private fun getDupeHash(priorDupes: Map<Long, ConcurrentSkipListSet<String>>):
             HashMap<String, ConcurrentSkipListSet<String>> {
         val dupeMD5s = ConcurrentHashMap<String, ConcurrentSkipListSet<String>>()
         logger.info("starting MD5 check")
         // for each set of files that are of the same size
         priorDupes.values.parallelStream().forEach { pathList ->
+//        priorDupes.values.forEach { pathList ->
             // different bucket of each unique filesize
             val md5s = ConcurrentHashMap<String, String>()
-            pathList.parallelStream().forEach { pathStr ->
+            pathList.forEach { pathStr ->
+//                pathList.parallelStream().forEach { pathStr ->
                 val md5 = calculateHash(Paths.get(pathStr).toFile())
                 val existingMD5 = md5s.putIfAbsent(md5, pathStr)
                 if (existingMD5 != null) {
