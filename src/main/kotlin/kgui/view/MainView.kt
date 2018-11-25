@@ -1,5 +1,6 @@
 package kgui.view
 
+import javafx.application.Platform
 import javafx.beans.property.SimpleBooleanProperty
 import javafx.beans.property.SimpleObjectProperty
 import javafx.beans.property.SimpleStringProperty
@@ -14,6 +15,7 @@ import kpics.LightroomDB
 import kpics.LocalPicFiles
 import mu.KLogger
 import mu.KotlinLogging
+import org.controlsfx.control.Notifications
 import tornadofx.*
 import java.io.File
 import java.net.InetAddress
@@ -24,8 +26,6 @@ import javax.json.Json
 import javax.json.JsonArray
 import javax.json.JsonObject
 import kotlin.system.measureTimeMillis
-
-
 
 class MainView : View("Pics") {
     private val logger: KLogger = KotlinLogging.logger {}
@@ -65,7 +65,7 @@ class MainView : View("Pics") {
     }
 }
 
-class DiffView : View() {
+class DiffView : View("Differences") {
     private val exif: ExifView by inject()
     private val imgPath = SimpleStringProperty()
     val pCont: PicCollectionsController by param()
@@ -134,39 +134,73 @@ class DiffView : View() {
 class DBForm : View() {
     val pCont: PicCollectionsController by param()
     private val logger: KLogger = KotlinLogging.logger {}
-    override val root = form()
-    private var dbs = fieldset("Lightroom database files")
-    private var files = fieldset("Directories with image files")
-
-    init {
-        pCont.allPicLibs.forEach { picL ->
-            logger.info("Adding ${picL.baseStr}")
-            when (picL) {
-                is LightroomDB   -> dbs.add(field {
-                    textfield { bind(picL.baseStr.toProperty()) }
-                    button("remove") {
-                        setOnAction {
-                            org.controlsfx.control.Notifications.create()
-                                    .title("Removing!")
-                                    .text(picL.baseStr)
-                                    .owner(this)
-                                    .showInformation()
-                        }
-                    }
-                })
-                is LocalPicFiles -> files.add(field {
-                    textfield { bind(picL.baseStr.toProperty()) }
-                    button("remove")
-                })
-                else             -> {
-                    log.warning("broken config data")
-                }
+    private var dbs: Fieldset by singleAssign()
+    private var files: Fieldset by singleAssign()
+    override val root = form {
+        dbs = fieldset("Lightroom database files") {
+            button("Add a db file") {
+                action { addDBClicked() }
             }
         }
-        dbs.add(button("Add a db file"))
-        files.add(button("Add a directory"))
-        root.add(dbs)
-        root.add(files)
+        files = fieldset("Directories with image files") {
+            button("Add a directory") {
+                action { addDirClicked() }
+            }
+        }
+        this += dbs
+        this += files
+        addPicLibsToForm()
+    }
+
+    private fun addDirClicked() {
+        openInternalWindow<AddDirDialogView>()
+    }
+
+    private fun addDBClicked() {
+        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    }
+
+    private fun addPicLibsToForm() {
+        pCont.allPicLibs.forEach { picL ->
+            addPicLibToForm(picL)
+        }
+    }
+
+    private fun addPicLibToForm(picL: AbstractPicCollection) {
+        logger.info("Adding ${picL.baseStr}")
+        when (picL) {
+            is LightroomDB   -> dbs.add(field {
+                textfield { bind(picL.baseStr.toProperty()) }
+                button("remove") {
+                    action {
+                        //                        setOnAction {
+                        Notifications.create()
+                                .title("Removing!")
+                                .text(picL.baseStr)
+                                .owner(this)
+                                .showInformation()
+                    }
+                }
+            })
+            is LocalPicFiles -> files.add(field {
+                textfield { bind(picL.baseStr.toProperty()) }
+                button("remove") {
+                    action {
+                        dialog {
+                            text("Not implemented!!")
+                        }
+                    }
+                }
+            })
+            else             -> {
+                log.warning("broken config data")
+            }
+        }
+    }
+}
+
+class AddDirDialogView : UIComponent() {
+    override val root = form {
     }
 }
 
@@ -258,7 +292,7 @@ class PicCollectionsController : Controller() {
     }
 
     private fun loadPicConfig() {
-        val picdbs: JsonArray = app.config.jsonArray("lightroomDbs")!!
+        val picdbs: JsonArray? = app.config.jsonArray("lightroomDbs")
         lateinit var picFiles: JsonArray
         if (!app.config.containsKey("lightroomDbs")) {
             createConfig(app)
@@ -272,8 +306,10 @@ localdirs=["g\:\\\\Dropbox\\\\Photos\\\\pics"]
             println(ex)
         }
         picdbs.let { jsonArray ->
-            for (dbPath in jsonArray) {
-                dbPath.asJsonObject().toModel<PicDBModel>().pdb?.let { allPicLibs.add(it) }
+            if (jsonArray != null) {
+                for (dbPath in jsonArray) {
+                    dbPath.asJsonObject().toModel<PicDBModel>().pdb?.let { allPicLibs.add(it) }
+                }
             }
         }
         app.config.jsonArray("localDirs")?.let {
@@ -292,9 +328,9 @@ fun createConfig(app: App) {
     var one = "$drop/pic.db"
     var three = "$drop/Photos/pics"
     if (InetAddress.getLocalHost().hostName == "lp") {
-        one = "g:\\Dropbox\\pic.db"
+        one = "f:\\Dropbox\\pic.db"
         two = "c:\\Temp\\Lightroom Catalog.lrcat"
-        three = "g:\\Dropbox\\Photos\\pics"
+        three = "f:\\Dropbox\\Photos\\pics"
     }
     val pm1 = PicDBModel()
     pm1.pdb = LightroomDB(one)
@@ -328,16 +364,24 @@ class DupeView : View() {
     val dupeC: DupeController by inject()
     override val root = scrollpane(true, true) {
         vbox {
-            label("Searching for duplicates, this may take a few minutes...", progressindicator()) {
+//            var status : TaskStatus?
+            var prog = progressindicator()
+            var dupeLabel = label("Searching for duplicates", prog) {
                 visibleWhen(!dupeC.doneSearching)
                 managedWhen(!dupeC.doneSearching)
             }
+            add(dupeLabel)
             listview<String> {
                 prefWidth = 300.0
                 minHeight = 600.0
                 vgrow = Priority.ALWAYS
                 runAsync {
-                    dupeC.updateDupes()
+                    this.updateMessage("Loading")
+                    Platform.runLater {
+                        prog.progressProperty().bind(this.progressProperty())
+                        dupeLabel.textProperty().bind(this.messageProperty())
+                    }
+                    dupeC.updateDupes(this)
                 } ui {
                     items = dupeC.dupeStrings
                 }
@@ -355,11 +399,20 @@ class DupeController : Controller() {
     var dupeStrings = ArrayList<String>().observable()
     private var justFiles = picCollectionsCont.allPicLibs.filter { it is LocalPicFiles }.map { it as LocalPicFiles }
     private var pf: LocalPicFiles? = justFiles.first()
-    fun updateDupes() {
+    fun updateDupes(fxTask: FXTask<*>) {
+        fun updateStatus(completed: Long, total: Long, msg: String, title: String): Unit {
+            Platform.runLater {
+                fxTask.updateMessage(msg)
+                fxTask.updateProgress(completed, total)
+                fxTask.updateTitle(title)
+            }
+        }
         logger.info("Looking for dupes")
+        pf?.updateFunc = ::updateStatus
         val duration = measureTimeMillis { dupes = pf?.getDupes() }
         logger.info("done looking for dupes, took ${duration / 1000} seconds")
         pf?.getDupeFileList()?.let { dupeStrings.addAll(it) }
         doneSearching.set(true)
     }
 }
+
