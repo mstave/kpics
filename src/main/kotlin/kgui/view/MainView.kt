@@ -60,6 +60,7 @@ class MainView : View("Pics") {
             }
             tab("Dupes") {
                 this += dupes.root
+                this.select()
             }
         }
     }
@@ -364,7 +365,7 @@ class DupeView : View() {
     val dupeC: DupeController by inject()
     override val root = scrollpane(true, true) {
         vbox {
-//            var status : TaskStatus?
+            //            var status : TaskStatus?
             var prog = progressindicator()
             var dupeLabel = label("Searching for duplicates", prog) {
                 visibleWhen(!dupeC.doneSearching)
@@ -400,11 +401,13 @@ class DupeController : Controller() {
     private var justFiles = picCollectionsCont.allPicLibs.filter { it is LocalPicFiles }.map { it as LocalPicFiles }
     private var pf: LocalPicFiles? = justFiles.first()
     fun updateDupes(fxTask: FXTask<*>) {
-        fun updateStatus(completed: Long, total: Long, msg: String, title: String): Unit {
+        fun updateStatus(completed: Long, total: Long, msg: String, title: String) {
             Platform.runLater {
-                fxTask.updateMessage(msg)
+                if (msg != "")
+                    fxTask.updateMessage(msg)
                 fxTask.updateProgress(completed, total)
-                fxTask.updateTitle(title)
+                if (title != "")
+                    fxTask.updateTitle(title)
             }
         }
         logger.info("Looking for dupes")

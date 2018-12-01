@@ -204,6 +204,8 @@ class LocalPicFiles(private val basePathStr: String) : AbstractPicCollection() {
         logger.info("starting first pass for dupes, by size")
         val pathCount = paths.size.toLong()
         val completed = AtomicLong(0)
+        updateFunc?.invoke(0L, pathCount, "checking $pathCount paths - 1st based uponfile sizes",
+                           "Looking for duplicates among $pathCount paths")
         paths.parallelStream().forEach { p ->
             val pathString = p.toString()
             val fileSize = p.toFile().length()
@@ -215,9 +217,7 @@ class LocalPicFiles(private val basePathStr: String) : AbstractPicCollection() {
                 doesExist?.let {
                     dupeSizes[fileSize]!!.add(pathString) // this is the 3rd+ time we've seen this length
                 }
-            }
-            updateFunc?.invoke(completed.incrementAndGet(), pathCount, "checking $pathCount paths - 1st based uponfile sizes",
-                               "Looking for duplicates")
+            } else updateFunc?.invoke(completed.incrementAndGet(), pathCount, "","")
         }
         logger.info("complete: first pass for dupes, by size")
         return HashMap(dupeSizes)
@@ -234,6 +234,9 @@ class LocalPicFiles(private val basePathStr: String) : AbstractPicCollection() {
         // for each set of files that are of the same size
         val sizeGroupCount = priorDupes.values.size.toLong()
         val completed = AtomicLong(0)
+        updateFunc?.invoke(completed.get(), sizeGroupCount,
+                           "found checking based on $sizeGroupCount file checksums",
+                           "Looking for duplicates")
         priorDupes.values.parallelStream().forEach { pathList ->
             // Ugh - parallel is faster on SSD, slower on disk
 //        priorDupes.values.forEach { pathList ->
@@ -255,8 +258,7 @@ class LocalPicFiles(private val basePathStr: String) : AbstractPicCollection() {
             }
             if (completed.incrementAndGet().rem(10L) == 0L) {
                 updateFunc?.invoke(completed.get(), sizeGroupCount,
-                                   "checking based on $sizeGroupCount file checksums",
-                                   "Looking for duplicates")
+                                   "checking $pathList","")
             }
         }
         logger.info("complete: hash-based dupe check")
