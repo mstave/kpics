@@ -63,6 +63,7 @@ class MainView : View("Pics") {
                 this.select()
             }
         }
+        logger.info("with root complete")
     }
 }
 
@@ -363,25 +364,28 @@ class PicsFragment : Fragment() {
 
 class DupeView : View() {
     val dupeC: DupeController by inject()
+    val status: TaskStatus by inject()
     override val root = scrollpane(true, true) {
         vbox {
-            //            var status : TaskStatus?
-            var prog = progressindicator()
-            var dupeLabel = label("Searching for duplicates", prog) {
-                visibleWhen(!dupeC.doneSearching)
-                managedWhen(!dupeC.doneSearching)
+            titleProperty.bind(status.title)
+            hbox {
+                progressindicator {
+                    minWidth=100.0
+                    bind(status.progress)
+                }
+                vbox {
+                    label("Looking for duplicates among ${dupeC.pf?.count} files.")
+                    label(status.title)
+                    label(status.message)
+                }
+                managedWhen(status.running)
             }
-            add(dupeLabel)
+
             listview<String> {
                 prefWidth = 300.0
                 minHeight = 600.0
                 vgrow = Priority.ALWAYS
                 runAsync {
-                    this.updateMessage("Loading")
-                    Platform.runLater {
-                        prog.progressProperty().bind(this.progressProperty())
-                        dupeLabel.textProperty().bind(this.messageProperty())
-                    }
                     dupeC.updateDupes(this)
                 } ui {
                     items = dupeC.dupeStrings
@@ -399,7 +403,7 @@ class DupeController : Controller() {
     var doneSearching = SimpleBooleanProperty(false)
     var dupeStrings = ArrayList<String>().observable()
     private var justFiles = picCollectionsCont.allPicLibs.filter { it is LocalPicFiles }.map { it as LocalPicFiles }
-    private var pf: LocalPicFiles? = justFiles.first()
+    var pf: LocalPicFiles? = justFiles.first()
     fun updateDupes(fxTask: FXTask<*>) {
         fun updateStatus(completed: Long, total: Long, msg: String, title: String) {
             Platform.runLater {

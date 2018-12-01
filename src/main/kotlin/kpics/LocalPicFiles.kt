@@ -101,10 +101,10 @@ class LocalPicFiles(private val basePathStr: String) : AbstractPicCollection() {
     // Some operations are long, this is a way to generically provide updates without
     // tying us to any specific framework, e.g. JavaFX Tasks
     // You can use the default function of provide your own
-    var updateFunc : ((completed:Long, total:Long, msg: String, title: String) -> Unit)? = {
-        completed, total, msg, title ->
-        logger.debug("%s : %s : completed %v of %v, ", msg, title, completed, total)
-    }
+    var updateFunc: ((completed: Long, total: Long, msg: String, title: String) -> Unit)? =
+            { completed, total, msg, title ->
+                logger.debug("%s : %s : completed %v of %v, ", msg, title, completed, total)
+            }
 
     fun getDirStats(): DirDupeStats { // path: totalFileCount, dupeFileCount
         val dupes = getDupes()
@@ -204,8 +204,7 @@ class LocalPicFiles(private val basePathStr: String) : AbstractPicCollection() {
         logger.info("starting first pass for dupes, by size")
         val pathCount = paths.size.toLong()
         val completed = AtomicLong(0)
-        updateFunc?.invoke(0L, pathCount, "checking $pathCount paths - 1st based uponfile sizes",
-                           "Looking for duplicates among $pathCount paths")
+        updateFunc?.invoke(0L, pathCount, "checking $pathCount files based upon their sizes", "")
         paths.parallelStream().forEach { p ->
             val pathString = p.toString()
             val fileSize = p.toFile().length()
@@ -217,7 +216,11 @@ class LocalPicFiles(private val basePathStr: String) : AbstractPicCollection() {
                 doesExist?.let {
                     dupeSizes[fileSize]!!.add(pathString) // this is the 3rd+ time we've seen this length
                 }
-            } else updateFunc?.invoke(completed.incrementAndGet(), pathCount, "","")
+            } //else updateFunc?.invoke(completed.incrementAndGet(), pathCount, "","")
+            if (completed.incrementAndGet().rem(10L) == 0L) {
+                updateFunc?.invoke(completed.get(), pathCount,
+                                   "", "checking $p")
+            }
         }
         logger.info("complete: first pass for dupes, by size")
         return HashMap(dupeSizes)
@@ -234,17 +237,15 @@ class LocalPicFiles(private val basePathStr: String) : AbstractPicCollection() {
         // for each set of files that are of the same size
         val sizeGroupCount = priorDupes.values.size.toLong()
         val completed = AtomicLong(0)
-        updateFunc?.invoke(completed.get(), sizeGroupCount,
-                           "found checking based on $sizeGroupCount file checksums",
-                           "Looking for duplicates")
+        updateFunc?.invoke(completed.get(), sizeGroupCount, "",
+           "checking based on checksums of $sizeGroupCount sets of files with matching sizes")
         priorDupes.values.parallelStream().forEach { pathList ->
             // Ugh - parallel is faster on SSD, slower on disk
 //        priorDupes.values.forEach { pathList ->
-
             // different bucket of each unique filesize
             val dupeHashesForSize = ConcurrentHashMap<String, String>()
             pathList.forEach { pathStr ->
-//                pathList.parallelStream().forEach { pathStr ->
+                //                pathList.parallelStream().forEach { pathStr ->
                 val fileHash = calculateHash(Paths.get(pathStr).toFile())
                 val existingHash = dupeHashesForSize.putIfAbsent(fileHash, pathStr)
                 if (existingHash != null) {
@@ -258,7 +259,7 @@ class LocalPicFiles(private val basePathStr: String) : AbstractPicCollection() {
             }
             if (completed.incrementAndGet().rem(10L) == 0L) {
                 updateFunc?.invoke(completed.get(), sizeGroupCount,
-                                   "checking $pathList","")
+                                   "checking $pathList", "")
             }
         }
         logger.info("complete: hash-based dupe check")
@@ -295,7 +296,7 @@ fun calculateHash(updateFile: File): String {
         println("Exception while getting digest for ${updateFile.name}: $e")
         return ""
     }
-    val buffer = ByteArray(  256 * 1024)
+    val buffer = ByteArray(256 * 1024)
     var amtRead: Int
     try {
         do {
@@ -317,8 +318,6 @@ fun calculateHash(updateFile: File): String {
     }
 }
 
-
-
 fun getMD5(path: Path): String {
     val md = java.security.MessageDigest.getInstance("MD5")
     val bytes = md.digest(path.toFile().readBytes())
@@ -328,7 +327,6 @@ fun getMD5(path: Path): String {
     }
     return result
 }
-
 
 var dbpaths = java.util.concurrent.ConcurrentSkipListSet<Path>()
 fun main(args: Array<String>) {
