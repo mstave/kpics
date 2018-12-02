@@ -8,7 +8,7 @@ import org.testfx.api.FxToolkit
 import tornadofx.*
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class DupeViewTest {
+class DupesTest {
     private val logger = KotlinLogging.logger {}
     private var app = KGuiPics()
     @BeforeAll
@@ -42,7 +42,7 @@ class DupeViewTest {
     fun getRoot() {
         logger.info("             ==== getTestRoot Starts")
         // TODO: break out heavy lifting from the controller to a non-javaFX class for easier testing
-        val dv = find<DupeView>()
+        val dv = find<Dupes>()
         val ds = dv.dupeC.dupeStrings
         val dc = find<DupeController>()
         Assertions.assertNotNull(dc)
