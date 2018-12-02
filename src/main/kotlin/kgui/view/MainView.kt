@@ -13,7 +13,7 @@ class MainView : View("Pics") {
         logger.debug("MainView init")
         with(root) {
             tab("Setup") {
-                this += find<DBForm>()
+                this += find<SetupForm>()
             }
             tab("All"){
                 this += find<All>()
@@ -33,8 +33,5 @@ class MainView : View("Pics") {
     }
 }
 
-class AddDirDialogView : UIComponent() {
-    override val root = form {
-    }
-}
+
 

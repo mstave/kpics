@@ -1,5 +1,6 @@
 package kgui.view
 
+import javafx.stage.FileChooser
 import kgui.app.PicCollectionsController
 import kpics.AbstractPicCollection
 import kpics.LightroomDB
@@ -9,7 +10,7 @@ import mu.KotlinLogging
 import org.controlsfx.control.Notifications
 import tornadofx.*
 
-class DBForm : View() {
+class SetupForm : View() {
     private val pCont: PicCollectionsController by inject()
     private val logger: KLogger = KotlinLogging.logger {}
     private var dbs: Fieldset by singleAssign()
@@ -31,11 +32,20 @@ class DBForm : View() {
     }
 
     private fun addDirClicked() {
-        openInternalWindow<AddDirDialogView>()
+        var picDir = chooseDirectory("Select Target Directory")
+        val newPicCollection = LocalPicFiles(picDir.toString())
+        addPicLibToForm(newPicCollection)
+        pCont.allPicLibs.add(LocalPicFiles(picDir.toString()))
     }
 
     private fun addDBClicked() {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        var picDB = chooseFile("Select Lightroom Database file", arrayOf(
+                FileChooser.ExtensionFilter("Lightroom default extension", "*.lrcat"),
+                FileChooser.ExtensionFilter("All files", "*.*"),
+                FileChooser.ExtensionFilter("db files", "*.db")))
+        val newPicCollection = LocalPicFiles(picDB.toString())
+        addPicLibToForm(newPicCollection)
+        pCont.allPicLibs.add(LightroomDB(picDB.toString()))
     }
 
     private fun addPicLibsToForm() {
@@ -70,9 +80,14 @@ class DBForm : View() {
                     }
                 }
             })
-            else                   -> {
+            else             -> {
                 log.warning("broken config data")
             }
+        }
+    }
+
+    class AddDirDialogView : UIComponent("Add new") {
+        override val root = form {
         }
     }
 }
