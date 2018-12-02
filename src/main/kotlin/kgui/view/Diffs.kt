@@ -13,7 +13,7 @@ import java.io.File
 class Diffs : View("Differences") {
     private val exif: ExifView by inject()
     private val imgPath = SimpleStringProperty()
-    val pCont: PicCollectionsController by param()
+    private val pCont: PicCollectionsController by inject()
     private val tv = tableview<CollectionsPerPic> {
         prefHeight = 1000.0
         asyncItems { pCont.diffs }

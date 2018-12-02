@@ -14,7 +14,7 @@ import kotlin.system.measureTimeMillis
 
 class Dupes : View() {
     val dupeC: DupeController by inject()
-    val status: TaskStatus by inject()
+    private val status: TaskStatus by inject()
     override val root = scrollpane(true, true) {
         vbox {
             titleProperty.bind(status.title)

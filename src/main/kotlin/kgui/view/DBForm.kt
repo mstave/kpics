@@ -10,7 +10,7 @@ import org.controlsfx.control.Notifications
 import tornadofx.*
 
 class DBForm : View() {
-    val pCont: PicCollectionsController by param()
+    private val pCont: PicCollectionsController by inject()
     private val logger: KLogger = KotlinLogging.logger {}
     private var dbs: Fieldset by singleAssign()
     private var files: Fieldset by singleAssign()

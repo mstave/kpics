@@ -9,7 +9,7 @@ import tornadofx.*
 
 class All : View("All") {
     override val root = splitpane(Orientation.HORIZONTAL)
-    private val pCont: PicCollectionsController by param()
+    private val pCont: PicCollectionsController by inject()
 
     init {
         with(root) {
