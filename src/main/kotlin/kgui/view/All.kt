@@ -1,6 +1,7 @@
 package kgui.view
 
 import javafx.geometry.Orientation
+import javafx.scene.control.SplitPane
 import javafx.scene.layout.Priority
 import javafx.scene.layout.VBox
 import kgui.app.PicCollectionsController
@@ -15,13 +16,25 @@ class All : View("All") {
         with(root) {
             prefWidth = 1200.0
             minHeight = 500.0
+            pCont.allPicLibs.onChange {
+                this.replaceChildren {
+                    it.list.forEach { picCol ->
+                        this += find<PicsFragment>(mapOf(PicsFragment::picObj to picCol))
+                    }
+                }
+                Balance()
+            }
             for (v in pCont.allPicLibs) {
                 this += find<PicsFragment>(mapOf(PicsFragment::picObj to v))
             }
             // even out dividers, weird that this seems to be needed
-            for (i in 0 until dividers.size) {
-                dividers[i].position = (1.0 + i) / (dividers.size + 1)
-            }
+            Balance()
+        }
+    }
+
+    private fun SplitPane.Balance() {
+        for (i in 0 until dividers.size) {
+            dividers[i].position = (1.0 + i) / (dividers.size + 1)
         }
     }
 }

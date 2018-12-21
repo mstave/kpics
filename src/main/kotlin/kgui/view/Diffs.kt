@@ -18,9 +18,9 @@ class Diffs : View("Differences") {
         prefHeight = 1000.0
         asyncItems { pCont.diffs }
         columnResizePolicy = SmartResize.POLICY
-        readonlyColumn("File", CollectionsPerPic::filePath).prefWidth(320)
+        readonlyColumn("File", CollectionsPerPic::picFilePath).prefWidth(320)
         for (v in pCont.allPicLibs) {
-            readonlyColumn(v.baseStr!!, CollectionsPerPic::basePaths).minWidth(
+            readonlyColumn(v.baseStr!!, CollectionsPerPic::picLibBasePaths).minWidth(
                     150.0).cellFormat { bPaths ->
                 if (bPaths.contains(v.baseStr)) {
                     text = "present"
@@ -40,7 +40,7 @@ class Diffs : View("Differences") {
             imgV.image = null
             pCont.allPicLibs.forEach { picL ->
                 if (imgV.image == null) {
-                    val maybeFile = picL.getFullPath(sel!!.filePath)
+                    val maybeFile = picL.getFullPath(sel!!.picFilePath)
                     if (maybeFile != null && File(maybeFile).isFile) {
                         imgV.image = Image(File(maybeFile).toURI().toString())
                     }

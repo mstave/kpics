@@ -20,7 +20,7 @@ typealias DirDupeStats = HashMap<String, Pair<Int, Int>>
 class LocalPicFiles(private val basePathStr: String) : AbstractPicCollection() {
     // @TODO check out delegating properties from basePath to be exposed as kpics.LocalPicFiles properties
     private val logger: KLogger = KotlinLogging.logger {}
-    private var dupesChecked = false
+    var dupesChecked = false
     private var _dupeFiles = HashSet<HashSet<String>>()  // in order to facilitate multithreaded checking
     var basePath: Path = Paths.get(basePathStr)
     var dupeFiles: HashSet<HashSet<String>>? = null
@@ -191,7 +191,6 @@ class LocalPicFiles(private val basePathStr: String) : AbstractPicCollection() {
         dupesChecked = true
         return _dupeFiles
     }
-
     /**
      * Find dupes in a list of files based upon their size
      * @param paths set of paths to files to be analyzed

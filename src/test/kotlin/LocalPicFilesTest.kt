@@ -48,7 +48,7 @@ internal class LocalPicFilesTest {
         assumeTrue(File(myPath).exists())
         val dupes = LocalPicFiles(myPath).getDupes()
         assertNotNull(dupes)
-        assertEquals(1369, dupes!!.size)
+        assertEquals(1371, dupes!!.size)
 //        assertEquals(2, dupes!!.size)
     }
 

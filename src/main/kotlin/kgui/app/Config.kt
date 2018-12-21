@@ -7,7 +7,7 @@ import mu.KLogger
 import mu.KotlinLogging
 import tornadofx.*
 import java.net.InetAddress
-import java.util.ArrayList
+import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentSkipListSet
 import javax.json.Json
@@ -18,12 +18,12 @@ import javax.json.JsonObject
  * Aggregates picture paths from all sources into one data structure
  */
 data class CollectionsPerPic(
-        var filePath: String,
-        var basePaths: ConcurrentSkipListSet<String?> // which piclibs have this file
+        var picFilePath: String,  // a particular picture
+        var picLibBasePaths: ConcurrentSkipListSet<String?> // which piclibs (identified by its root) have this file
                             )
 
 class CollectionsPerPicModel : ItemViewModel<CollectionsPerPic>() {
-    val filePath = bind(CollectionsPerPic::filePath)
+    val filePath = bind(CollectionsPerPic::picFilePath)
 }
 
 /**
@@ -33,6 +33,8 @@ class CollectionsPerPicModel : ItemViewModel<CollectionsPerPic>() {
  */
 class PicDBModel : JsonModel {
     var pdb: LightroomDB? = null
+    //observable(pdb,LightroomDB::baseStr)
+
     override fun updateModel(json: JsonObject) {
         with(json) {
             val pt = string("path")
@@ -47,12 +49,17 @@ class PicDBModel : JsonModel {
     }
 }
 
+class PicIVM : ItemViewModel<LocalPicFiles>() {
+
+}
 /**
  * Used for serializing LocalPicFiles to JSON
  *
  */
-class PicFileModel : JsonModel {
-    var pf: LocalPicFiles? = null
+class PicFileModel(var pf : LocalPicFiles? = null) : JsonModel, ItemViewModel<LocalPicFiles>(pf){
+    //    var concatedPf: LocalPicFiles? = null
+    var baseStr = bind(LocalPicFiles::baseStr)
+
     override fun updateModel(json: JsonObject) {
         with(json) {
             pf = string("path")?.let { LocalPicFiles(it) }
@@ -70,25 +77,29 @@ class PicFileModel : JsonModel {
  * All the data manipulation heavy lifting
  */
 class PicCollectionsController : Controller() {
-    // array of each of pic collection of any type in use in the app
+
     private val logger: KLogger = KotlinLogging.logger {}
-    internal val allPicLibs = ArrayList<AbstractPicCollection>()
+    // array of each of pic collection of any type in use in the app
+    internal val allPicLibs = ArrayList<AbstractPicCollection>().observable()
     val collectionsPerPicModel = CollectionsPerPicModel()
+    // for each path, which collection contains that pic?
     private var collectionsPerPic = ConcurrentHashMap<String, CollectionsPerPic>()
     var diffs = ArrayList<CollectionsPerPic>().observable()
     private fun loadDupes() {
-        logger.debug("Looking for duplicates")
+
+        logger.info("Looking for duplicates, collection count ")
+        logger.info(allPicLibs.size.toString())
         allPicLibs.parallelStream().forEach { p ->
             log.fine("   Checking ${p.baseStr}")
             p.relativePaths.parallelStream().forEach { pathVal ->
                 val exist = pathVal?.let {
                     collectionsPerPic.putIfAbsent(it,
                                                   CollectionsPerPic(pathVal,
-                                                                             ConcurrentSkipListSet(
-                                                                                     setOf(p.baseStr))))
+                                                                    ConcurrentSkipListSet(
+                                                                            setOf(p.baseStr))))
                 }
                 exist?.let {
-                    collectionsPerPic[pathVal]!!.basePaths.add(p.baseStr)
+                    collectionsPerPic[pathVal]!!.picLibBasePaths.add(p.baseStr)
                 }
             }
             diffs = ArrayList(collectionsPerPic.values).observable() // update table after each "column"
