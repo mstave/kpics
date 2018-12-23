@@ -172,6 +172,7 @@ class LocalPicFiles(private val basePathStr: String) : AbstractPicCollection() {
     }
 
     /**
+     * For files in this.filePaths, determine which are duplicates
      * @return  <<file1 file2><file3 file4 file5> ... >
      */
     @Synchronized
@@ -226,6 +227,7 @@ class LocalPicFiles(private val basePathStr: String) : AbstractPicCollection() {
     }
 
     /**
+     * Given files of matching sizes, use the hashcode of the file to do a more thorough diff
      * @param priorDupes input hashmap of <<filesize -> list of files of that size>>
      * @return <<md5value1 : <fileA, fileB>>,<md5value2 : <fileC, fileD, fileE>>>
      */

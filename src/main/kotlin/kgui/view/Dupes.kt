@@ -4,7 +4,6 @@ import javafx.application.Platform
 import javafx.beans.binding.Bindings
 import javafx.beans.property.SimpleBooleanProperty
 import javafx.beans.property.SimpleIntegerProperty
-import javafx.beans.property.SimpleObjectProperty
 import javafx.scene.layout.Priority
 import kgui.app.PicCollectionsController
 import kpics.LocalPicFiles
@@ -18,7 +17,8 @@ class Dupes : View() {
     private val logger: KLogger = KotlinLogging.logger {}
     val dupeC: DupeController by inject()
     private val status: TaskStatus by inject()
-    var itemsP = mutableListOf<String>().observable()
+    // TODO pass status to dupeC then have dupeC handle the picCollectionsCont.allPicLibs.onChange
+    private var itemsP = mutableListOf<String>().observable()
     override val root = scrollpane(true, true) {
         vbox {
             titleProperty.bind(status.title)
@@ -37,16 +37,14 @@ class Dupes : View() {
             }
 
             listview<String> {
-                items = this@Dupes.itemsP
+                items = dupeC.dupeStrings
+//                items = this@Dupes.itemsP
                 prefWidth = 300.0
                 minHeight = 600.0
                 vgrow = Priority.ALWAYS
                 dupeC.picCollectionsCont.allPicLibs.onChange {
-                    logger.info("got change message")
                     runAsync {
-                        dupeC.updateDupes(this)
-                    } ui {
-                        this@Dupes.itemsP.addAll(dupeC.dupeStrings)
+                        dupeC.getDupesFromAllLocalCollections(this)
                     }
                 }
                 updateDiffs()
@@ -57,9 +55,7 @@ class Dupes : View() {
     private fun updateDiffs() {
         logger.info("updateDiffs")
         runAsync {
-            dupeC.updateDupes(this)
-        } ui {
-            this@Dupes.itemsP.addAll(dupeC.dupeStrings)
+            dupeC.getDupesFromAllLocalCollections(this)
         }
     }
 }
@@ -67,14 +63,12 @@ class Dupes : View() {
 class DupeController : Controller() {
     private val logger: KLogger = KotlinLogging.logger {}
     val picCollectionsCont: PicCollectionsController by inject()
-    private val dupesProperty =
-            SimpleObjectProperty<HashSet<HashSet<String>>>()
-    private var dupes by dupesProperty
     var doneSearching = SimpleBooleanProperty(false)
     var dupeStrings = ArrayList<String>().observable()
-    var concatedPf = LocalPicFiles("")
     var pfCount = SimpleIntegerProperty()
-    fun updateDupes(fxTask: FXTask<*>) {
+
+    fun getDupesFromAllLocalCollections(fxTask: FXTask<*>) {
+        var concatedPf = LocalPicFiles("")
         fun updateStatus(completed: Long, total: Long, msg: String, title: String) {
             Platform.runLater {
                 if (msg != "")
@@ -94,11 +88,15 @@ class DupeController : Controller() {
         }
         concatedPf.updateFunc = ::updateStatus
         concatedPf.dupesChecked = false
-        val duration = measureTimeMillis { dupes = concatedPf.getDupes() }
+        // prime cache
+        val duration = measureTimeMillis { concatedPf.getDupes() }
         logger.info("done looking for dupes, took ${duration / 1000} seconds")
-        logger.info("checked == " + concatedPf.dupesChecked)
+        logger.debug("checked == " + concatedPf.dupesChecked)
         concatedPf.dupesChecked = true
-        concatedPf.getDupeFileList()?.let { dupeStrings.addAll(it) }
-        doneSearching.set(true)
+        Platform.runLater {
+            // will get from cache
+            concatedPf.getDupeFileList()?.let { dupeStrings.addAll(it) }
+            doneSearching.set(true)
+        }
     }
 }
