@@ -18,7 +18,6 @@ class Dupes : View() {
     val dupeC: DupeController by inject()
     private val status: TaskStatus by inject()
     // TODO pass status to dupeC then have dupeC handle the picCollectionsCont.allPicLibs.onChange
-    private var itemsP = mutableListOf<String>().observable()
     override val root = scrollpane(true, true) {
         vbox {
             titleProperty.bind(status.title)
@@ -87,12 +86,9 @@ class DupeController : Controller() {
             pfCount.set(concatedPf.filePaths.count())
         }
         concatedPf.updateFunc = ::updateStatus
-        concatedPf.dupesChecked = false
         // prime cache
-        val duration = measureTimeMillis { concatedPf.getDupes() }
+        val duration = measureTimeMillis { concatedPf.dupeFiles }
         logger.info("done looking for dupes, took ${duration / 1000} seconds")
-        logger.debug("checked == " + concatedPf.dupesChecked)
-        concatedPf.dupesChecked = true
         Platform.runLater {
             // will get from cache
             concatedPf.getDupeFileList()?.let { dupeStrings.addAll(it) }

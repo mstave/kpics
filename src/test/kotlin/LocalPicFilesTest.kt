@@ -46,7 +46,7 @@ internal class LocalPicFilesTest {
 
         }
         assumeTrue(File(myPath).exists())
-        val dupes = LocalPicFiles(myPath).getDupes()
+        val dupes = LocalPicFiles(myPath).dupeFiles
         assertNotNull(dupes)
         assertEquals(1371, dupes!!.size)
 //        assertEquals(2, dupes!!.size)
@@ -65,7 +65,7 @@ internal class LocalPicFilesTest {
    @Test
     fun testChecksumUnique() {
         val pics = getTestPics()
-        val dupe = pics.getDupes()
+        val dupe = pics.dupeFiles
         assertNotNull(dupe)
         assertTrue(dupe!!.size > 0)
     }
@@ -90,8 +90,8 @@ internal class LocalPicFilesTest {
     @Test
     fun testDupeMemoize() {
         val pf = getTestPics()
-        val d1 = GlobalScope.async(Dispatchers.Default, CoroutineStart.DEFAULT, null, { pf.getDupes() })
-        val d2 = GlobalScope.async(Dispatchers.Default, CoroutineStart.DEFAULT, null, { pf.getDupes() })
+        val d1 = GlobalScope.async(Dispatchers.Default, CoroutineStart.DEFAULT, null, { pf.dupeFiles })
+        val d2 = GlobalScope.async(Dispatchers.Default, CoroutineStart.DEFAULT, null, { pf.dupeFiles })
         runBlocking {
             println(d1.await()?.size)
             println(d2.await()?.size)
@@ -103,7 +103,7 @@ internal class LocalPicFilesTest {
 
     @Test
     fun testForEachDupe() {
-        getTestPics().getDupes()?.forEach {
+        getTestPics().dupeFiles?.forEach {
             println(it)
         }
     }
