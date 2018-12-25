@@ -50,10 +50,8 @@ class LocalPicFiles(private val basePathStr: String) : AbstractPicCollection() {
 
     override val paths: TreeSet<Path>
         get() = filePaths
-    val dupeFiles: HashSet<HashSet<String>>? by lazy {
-        logger.debug("dupeFiles checked")
-        getDupes()
-    }
+
+    val dupeFiles: HashSet<HashSet<String>>? by lazy(::getDupes)
 
     fun printFiles() {
         for (f in paths) {
