@@ -18,7 +18,6 @@ import kotlin.collections.set
 typealias DirDupeStats = HashMap<String, Pair<Int, Int>>
 
 class LocalPicFiles(private val basePathStr: String) : AbstractPicCollection() {
-    // @TODO check out delegating properties from basePath to be exposed as kpics.LocalPicFiles properties
     private val logger: KLogger = KotlinLogging.logger {}
     var basePath: Path = Paths.get(basePathStr)
     var filePaths: TreeSet<Path> = TreeSet()

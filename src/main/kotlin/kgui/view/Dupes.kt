@@ -37,26 +37,18 @@ class Dupes : View() {
 
             listview<String> {
                 items = dupeC.dupeStrings
-//                items = this@Dupes.itemsP
                 prefWidth = 300.0
                 minHeight = 600.0
                 vgrow = Priority.ALWAYS
                 dupeC.picCollectionsCont.allPicLibs.onChange {
-                    runAsync {
-                        dupeC.getDupesFromAllLocalCollections(this)
-                    }
+                    updateDiffs()
                 }
                 updateDiffs()
             }
         }
     }
 
-    private fun updateDiffs() {
-        logger.info("updateDiffs")
-        runAsync {
-            dupeC.getDupesFromAllLocalCollections(this)
-        }
-    }
+    private fun updateDiffs() = runAsync { dupeC.getDupesFromAllLocalCollections(this) }
 }
 
 class DupeController : Controller() {
@@ -65,7 +57,6 @@ class DupeController : Controller() {
     var doneSearching = SimpleBooleanProperty(false)
     var dupeStrings = ArrayList<String>().observable()
     var pfCount = SimpleIntegerProperty()
-
     fun getDupesFromAllLocalCollections(fxTask: FXTask<*>) {
         var concatedPf = LocalPicFiles("")
         fun updateStatus(completed: Long, total: Long, msg: String, title: String) {
