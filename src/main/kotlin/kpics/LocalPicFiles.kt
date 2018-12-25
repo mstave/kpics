@@ -50,10 +50,9 @@ class LocalPicFiles(private val basePathStr: String) : AbstractPicCollection() {
 
     override val paths: TreeSet<Path>
         get() = filePaths
-
     val dupeFiles: HashSet<HashSet<String>>? by lazy {
         logger.debug("dupeFiles checked")
-       getDupes()
+        getDupes()
     }
 
     fun printFiles() {
@@ -62,16 +61,6 @@ class LocalPicFiles(private val basePathStr: String) : AbstractPicCollection() {
         }
         logger.info("test")
         logger.info(filePaths.size.toString())
-    }
-
-    init {
-        logger.debug { "Starting file walk of $basePathStr" }
-        for (path in Files.walk(this.basePath)) {
-            if (filterImages(path)) filePaths.add(path) else {
-//                println("Skipping directory: ${path}")
-            }
-        }
-        logger.debug { "File walk complete, $count files found" }
     }
 
     private fun filterImages(path: Path): Boolean {
@@ -95,13 +84,13 @@ class LocalPicFiles(private val basePathStr: String) : AbstractPicCollection() {
         for (e in extensions) {
             if (path.toString().toLowerCase().endsWith(e)) return true
         }
-//        println("Skipping extension from $path")
         return false
     }
-
-    // Some operations are long, this is a way to generically provide updates without
-    // tying us to any specific framework, e.g. JavaFX Tasks
-    // You can use the default function of provide your own
+    /**
+     * Some operations are long, this is a way to generically provide updates without
+     * tying us to any specific framework, e.g. JavaFX Tasks
+     * You can use the default function of provide your own
+     */
     var updateFunc: ((completed: Long, total: Long, msg: String, title: String) -> Unit)? =
             { completed, total, msg, title ->
                 logger.debug("%s : %s : completed %v of %v, ", msg, title, completed, total)
@@ -282,6 +271,14 @@ class LocalPicFiles(private val basePathStr: String) : AbstractPicCollection() {
                 }
             }
         }
+    }
+
+    init {
+        logger.debug { "Starting file walk of $basePathStr" }
+        for (path in Files.walk(this.basePath)) {
+            if (filterImages(path)) filePaths.add(path)
+        }
+        logger.debug { "File walk complete, $count files found" }
     }
 }
 
