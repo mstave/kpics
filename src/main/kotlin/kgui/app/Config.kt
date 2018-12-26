@@ -1,5 +1,6 @@
 package kgui.app
 
+import javafx.application.Platform
 import kpics.AbstractPicCollection
 import kpics.LightroomDB
 import kpics.LocalPicFiles
@@ -77,7 +78,6 @@ class PicFileModel(var pf : LocalPicFiles? = null) : JsonModel, ItemViewModel<Lo
  * All the data manipulation heavy lifting
  */
 class PicCollectionsController : Controller() {
-
     private val logger: KLogger = KotlinLogging.logger {}
     // array of each of pic collection of any type in use in the app
     internal val allPicLibs = ArrayList<AbstractPicCollection>().observable()
@@ -85,12 +85,9 @@ class PicCollectionsController : Controller() {
     // for each path, which collection contains that pic?
     private var collectionsPerPic = ConcurrentHashMap<String, CollectionsPerPic>()
     var diffs = ArrayList<CollectionsPerPic>().observable()
-    private fun loadDupes() {
-
-        logger.info("Looking for duplicates, collection count ")
-        logger.info(allPicLibs.size.toString())
+    fun loadDiffs() {
+        logger.info("Looking for differences, collection count ${allPicLibs.size}")
         allPicLibs.parallelStream().forEach { p ->
-            log.fine("   Checking ${p.baseStr}")
             p.relativePaths.parallelStream().forEach { pathVal ->
                 val exist = pathVal?.let {
                     collectionsPerPic.putIfAbsent(it,
@@ -102,15 +99,17 @@ class PicCollectionsController : Controller() {
                     collectionsPerPic[pathVal]!!.picLibBasePaths.add(p.baseStr)
                 }
             }
-            diffs = ArrayList(collectionsPerPic.values).observable() // update table after each "column"
             logger.debug("----- Done: ${p.baseStr}")
         }
-        logger.debug("-----====  DUPE LOADING COMPLETE")
+        logger.debug("-----====  DIFF LOADING COMPLETE")
+        Platform.runLater {
+            diffs.addAll(collectionsPerPic.values)
+        }
     }
 
     init {
         loadPicConfig()
-        loadDupes()
+        loadDiffs()
     }
 
     private fun loadPicConfig() {
