@@ -63,7 +63,6 @@ class Diffs : View("Differences") {
             }
         }
     }
-
     private val imgV = imageview {
         isPreserveRatio = true
         exif.xCont.pathProp.bind(imgPath)
@@ -86,7 +85,5 @@ class Diffs : View("Differences") {
 
     init {
         tv.selectionModel.clearAndSelect(1)
-//        tv.selectionModel.selectFirst()
-//        imgV.fitHeightProperty().bind(bottomPane.heightProperty())
     }
 }
