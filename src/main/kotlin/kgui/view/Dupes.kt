@@ -14,7 +14,6 @@ import java.util.*
 import kotlin.system.measureTimeMillis
 
 class Dupes : View() {
-    private val logger: KLogger = KotlinLogging.logger {}
     val dupeC: DupeController by inject()
     private val status: TaskStatus by inject()
     // TODO pass status to dupeC then have dupeC handle the picCollectionsCont.allPicLibs.onChange
@@ -58,7 +57,7 @@ class DupeController : Controller() {
     var dupeStrings = ArrayList<String>().observable()
     var pfCount = SimpleIntegerProperty()
     fun getDupesFromAllLocalCollections(fxTask: FXTask<*>) {
-        var concatedPf = LocalPicFiles("")
+        val concatedPf = LocalPicFiles("")
         fun updateStatus(completed: Long, total: Long, msg: String, title: String) {
             Platform.runLater {
                 if (msg != "")
@@ -69,7 +68,7 @@ class DupeController : Controller() {
             }
         }
         logger.info("Looking for dupes")
-        var justFiles = picCollectionsCont.allPicLibs.filter { it is LocalPicFiles }.map { it as LocalPicFiles }
+        val justFiles = picCollectionsCont.allPicLibs.filter { it is LocalPicFiles }.map { it as LocalPicFiles }
         justFiles.forEach {
             concatedPf.filePaths.addAll(it.filePaths)
         }

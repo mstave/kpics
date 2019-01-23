@@ -50,9 +50,6 @@ class PicDBModel : JsonModel {
     }
 }
 
-class PicIVM : ItemViewModel<LocalPicFiles>() {
-
-}
 /**
  * Used for serializing LocalPicFiles to JSON
  *

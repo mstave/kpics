@@ -21,7 +21,6 @@ import java.util.*
 
 class LightroomDB(private val fName: String?) : AbstractPicCollection() {
     private val logger: KLogger = KotlinLogging.logger {}
-
     private var libFile = LibFile
     private val ds = SQLiteDataSource()
     override val baseStr
@@ -62,16 +61,18 @@ class LightroomDB(private val fName: String?) : AbstractPicCollection() {
             return result
         }
 
-    override fun getFullPath(relPath: String): String? {
+    override fun getFullPath(relPath: String?): String? {
         var fPath: String? = null
-        xact {
-            val base = relPath.substringBeforeLast(".")
-            val ext = relPath.substringAfterLast(".")
-            val findRes = libFile.find {
-                ((AgLibraryFile.baseName eq base) and (AgLibraryFile.extension eq ext))
-            }
-            if (!findRes.empty()) {
-                fPath = findRes.first().toString()
+        relPath?.let {
+            xact {
+                val base = relPath.substringBeforeLast(".")
+                val ext = relPath.substringAfterLast(".")
+                val findRes = libFile.find {
+                    ((AgLibraryFile.baseName eq base) and (AgLibraryFile.extension eq ext))
+                }
+                if (!findRes.empty()) {
+                    fPath = findRes.first().toString()
+                }
             }
         }
         return fPath

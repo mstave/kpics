@@ -8,13 +8,10 @@ import javafx.scene.paint.Color
 import kgui.app.CollectionsPerPic
 import kgui.app.PicCollectionsController
 import kgui.exif.ExifView
-import mu.KLogger
-import mu.KotlinLogging
 import tornadofx.*
 import java.io.File
 
 class Diffs : View("Differences") {
-    private val logger: KLogger = KotlinLogging.logger {}
     private val exif: ExifView by inject()
     private val imgPath = SimpleStringProperty()
     private val pCont: PicCollectionsController by inject()
@@ -29,9 +26,10 @@ class Diffs : View("Differences") {
         }
         onSelectionChange { sel ->
             imgV.image = null
+
             pCont.allPicLibs.forEach { picL ->
                 if (imgV.image == null) {
-                    val maybeFile = picL.getFullPath(sel!!.picFilePath)
+                    val maybeFile = picL.getFullPath(sel?.picFilePath)
                     if (maybeFile != null && File(maybeFile).isFile) {
                         imgV.image = Image(File(maybeFile).toURI().toString())
                     }

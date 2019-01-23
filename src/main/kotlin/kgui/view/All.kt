@@ -22,17 +22,17 @@ class All : View("All") {
                         this += find<PicsFragment>(mapOf(PicsFragment::picObj to picCol))
                     }
                 }
-                Balance()
+                balance()
             }
             for (v in pCont.allPicLibs) {
                 this += find<PicsFragment>(mapOf(PicsFragment::picObj to v))
             }
             // even out dividers, weird that this seems to be needed
-            Balance()
+            balance()
         }
     }
 
-    private fun SplitPane.Balance() {
+    private fun SplitPane.balance() {
         for (i in 0 until dividers.size) {
             dividers[i].position = (1.0 + i) / (dividers.size + 1)
         }

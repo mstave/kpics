@@ -32,20 +32,26 @@ class SetupForm : View() {
     }
 
     private fun addDirClicked() {
-        var picDir = chooseDirectory("Select Target Directory")
-        val newPicCollection = LocalPicFiles(picDir.toString())
-        addPicLibToForm(newPicCollection)
-        pCont.allPicLibs.add(LocalPicFiles(picDir.toString()))
+        val picDir = chooseDirectory("Select Target Directory")
+        picDir?.let {
+            val newPicCollection = LocalPicFiles(picDir.toString())
+            addPicLibToForm(newPicCollection)
+            pCont.allPicLibs.add(LocalPicFiles(picDir.toString()))
+        }
     }
 
     private fun addDBClicked() {
-        var picDB = chooseFile("Select Lightroom Database file", arrayOf(
+        val picDBs = chooseFile("Select Lightroom Database file", arrayOf(
                 FileChooser.ExtensionFilter("Lightroom default extension", "*.lrcat"),
                 FileChooser.ExtensionFilter("All files", "*.*"),
-                FileChooser.ExtensionFilter("db files", "*.db")))
-        val newPicCollection = LocalPicFiles(picDB.toString())
-        addPicLibToForm(newPicCollection)
-        pCont.allPicLibs.add(LightroomDB(picDB.toString()))
+                FileChooser.ExtensionFilter("db files", "*.db")), FileChooserMode.Multi)
+        picDBs.let {
+            picDBs.forEach { picDB ->
+                val newPicCollection = LocalPicFiles(picDB.toString())
+                addPicLibToForm(newPicCollection)
+                pCont.allPicLibs.add(LightroomDB(picDB.toString()))
+            }
+        }
     }
 
     private fun addPicLibsToForm() {
@@ -62,7 +68,7 @@ class SetupForm : View() {
                 action {
                     //                        setOnAction {
                     val dlg = Alert(Alert.AlertType.CONFIRMATION, "${picL.baseStr}")
-                    dlg.headerText = "Click OK to remove, or cancel to abort"
+                    dlg.headerText = "Click OK to remove, or Cancel to abort"
                     dlg.title = "Removing entry"
                     dlg.showAndWait().ifPresent { result ->
                         println("Result is $result")
@@ -82,11 +88,6 @@ class SetupForm : View() {
             else             -> {
                 log.warning("broken config data")
             }
-        }
-    }
-
-    class AddDirDialogView : UIComponent("Add new") {
-        override val root = form {
         }
     }
 }

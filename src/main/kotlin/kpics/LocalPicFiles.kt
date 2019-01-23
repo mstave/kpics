@@ -38,10 +38,12 @@ class LocalPicFiles(private val basePathStr: String) : AbstractPicCollection() {
             }))
         }
 
-    override fun getFullPath(relPath: String): String? {
-        for (f in filePaths) {
-            if (f.toString().contains(relPath)) {
-                return f.toString()
+    override fun getFullPath(relPath: String?): String? {
+        relPath?.let {
+            for (f in filePaths) {
+                if (f.toString().contains(relPath)) {
+                    return f.toString()
+                }
             }
         }
         return ""
@@ -162,7 +164,7 @@ class LocalPicFiles(private val basePathStr: String) : AbstractPicCollection() {
      * @return  <<file1 file2><file3 file4 file5> ... >
      */
     private fun getDupes(): HashSet<HashSet<String>>? {
-        var dupeFiles = HashSet<HashSet<String>>()  // in order to facilitate multithreaded checking
+        val dupeFiles = HashSet<HashSet<String>>()  // in order to facilitate multithreaded checking
         updateFunc?.invoke(0, filePaths.size.toLong(), "checking 1st based upon file sizes",
                            "Looking for duplicates")
         val dupeSizes = getDupeSizes(filePaths)

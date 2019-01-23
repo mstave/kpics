@@ -9,7 +9,7 @@ abstract class AbstractPicCollection {
     abstract val paths: TreeSet<Path>
     abstract val baseStr: String?
     abstract val relativePaths: TreeSet<String?>
-    abstract fun getFullPath(relPath: String): String?
+    abstract fun getFullPath(relPath: String?): String?
 
     fun toRelativePathStr(path: Path): String? {
         this.baseStr?.let { bstr ->
