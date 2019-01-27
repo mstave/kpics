@@ -52,7 +52,8 @@ class LocalPicFiles(private val basePathStr: String) : AbstractPicCollection() {
     override val paths: TreeSet<Path>
         get() = filePaths
 
-    val dupeFiles: HashSet<HashSet<String>>? by lazy(::getDupes)
+    // <<path1, path2>, <path23, path99, path1234... >, ... >
+    val dupeFiles: Set<Set<String>>? by lazy(::getDupes)
 
     fun printFiles() {
         for (f in paths) {
@@ -163,18 +164,19 @@ class LocalPicFiles(private val basePathStr: String) : AbstractPicCollection() {
      * use this.dupeFiles (which calls this) which will auto-memoize this expensive operation
      * @return  <<file1 file2><file3 file4 file5> ... >
      */
-    private fun getDupes(): HashSet<HashSet<String>>? {
+    private fun getDupes(): Set<Set<String>>? {
         val dupeFiles = HashSet<HashSet<String>>()  // in order to facilitate multithreaded checking
         updateFunc?.invoke(0, filePaths.size.toLong(), "checking 1st based upon file sizes",
                            "Looking for duplicates")
         val dupeSizes = getDupeSizes(filePaths)
         logger.info("Based upon size, dupe count: ${dupeSizes.size}")
+        // checksum -> [ set of files matching that checksum ]
         val dupeHash = getDupeHash(dupeSizes)
         dupeHash.values.forEach {
             dupeFiles.add(it.toHashSet())
         }
         logger.info("After checking checksum of size-based dupes : ${dupeSizes.size}")
-        return dupeFiles
+        return dupeHash.values.toSet()
     }
 
     /**
@@ -213,11 +215,11 @@ class LocalPicFiles(private val basePathStr: String) : AbstractPicCollection() {
 
     /**
      * Given files of matching sizes, use the hashcode of the file to do a more thorough diff
-     * @param priorDupes input hashmap of <<filesize -> list of files of that size>>
-     * @return <<md5value1 : <fileA, fileB>>,<md5value2 : <fileC, fileD, fileE>>>
+     * @param priorDupes input hashmap of <filesize -> <list of files of that size>>
+     * @return map of checksum:<list of files with that checksum>
      */
     private fun getDupeHash(priorDupes: Map<Long, ConcurrentSkipListSet<String>>):
-            HashMap<String, ConcurrentSkipListSet<String>> {
+            Map<String, Set<String>> {
         val allDupeHashes = ConcurrentHashMap<String, ConcurrentSkipListSet<String>>()
         logger.info("starting hash-based dupe check")
         // for each set of files that are of the same size
@@ -243,16 +245,17 @@ class LocalPicFiles(private val basePathStr: String) : AbstractPicCollection() {
                     }
                 }
             }
-            if (completed.incrementAndGet().rem(10L) == 0L) {
+            if (completed.incrementAndGet().rem(10L) == 0L) {  // don't be overly chatty
                 updateFunc?.invoke(completed.get(), sizeGroupCount,
                                    "checking $pathList", "")
             }
         }
         logger.info("complete: hash-based dupe check")
-        return HashMap(allDupeHashes)
+        return allDupeHashes
     }
 
     fun getDupeFileList(): List<String>? {
+        // from
         return dupeFiles?.flatten()?.map { "$it : ${getDupesForFile(it)}" }?.sorted()
     }
 
