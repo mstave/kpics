@@ -15,6 +15,7 @@ version = '1.0-SNAPSHOT'
 apply plugin: 'java'
 apply plugin: 'kotlin'
 apply plugin: 'application'
+apply plugin: 'no.tornado.fxlauncher'
 
 sourceCompatibility = 1.8
 ext {
@@ -25,7 +26,13 @@ ext {
 }
 buildscript {
     repositories {
-        maven { url "https://dl.bintray.com/kotlin/kotlin-eap" }
+        maven {
+            url "https://dl.bintray.com/kotlin/kotlin-eap"
+            mavenCentral()
+        }
+    }
+    dependencies {
+        classpath 'no.tornado:fxlauncher-gradle-plugin:1.0.20'
     }
 }
 repositories {
@@ -93,3 +100,14 @@ compileJava {
 //    }
 //}
 mainClassName = "kgui.app.KGuiPics"
+fxlauncher {
+    applicationVendor 'My Company'
+    // Base URL where you will host the application artifacts
+    applicationUrl 'http://localhost'
+    applicationMainClass mainClassName
+    acceptDowngrade false
+    // Optional scp target for application artifacts hosted at the above url
+   // deployTarget 'w48839@fxldemo.tornado.no:fxldemo'
+    deployTarget 'c:\\temp\\kp\\'
+}
+

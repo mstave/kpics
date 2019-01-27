@@ -7,6 +7,7 @@ import kpics.LocalPicFiles
 import mu.KLogger
 import mu.KotlinLogging
 import tornadofx.*
+import java.io.File
 import java.net.InetAddress
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
@@ -33,13 +34,20 @@ class CollectionsPerPicModel : ItemViewModel<CollectionsPerPic>() {
  * keep the TonadoFX stuff separate
  */
 class PicDBModel : JsonModel {
+    private val logger: KLogger = KotlinLogging.logger {}
     var pdb: LightroomDB? = null
     //observable(pdb,LightroomDB::baseStr)
-
     override fun updateModel(json: JsonObject) {
         with(json) {
-            val pt = string("path")
-            pdb = LightroomDB(pt)
+            pdb = string("path")?.let {
+                if (File(it).exists()) {
+                    logger.info("loading database at $it")
+                    LightroomDB(it)
+                } else {
+                    logger.warn("tried to load database $it that doesn't exist")
+                    null
+                }
+            }
         }
     }
 
@@ -54,13 +62,21 @@ class PicDBModel : JsonModel {
  * Used for serializing LocalPicFiles to JSON
  *
  */
-class PicFileModel(var pf : LocalPicFiles? = null) : JsonModel, ItemViewModel<LocalPicFiles>(pf){
+class PicFileModel(var pf: LocalPicFiles? = null) : JsonModel, ItemViewModel<LocalPicFiles>(pf) {
     //    var concatedPf: LocalPicFiles? = null
+    private val logger: KLogger = KotlinLogging.logger {}
     var baseStr = bind(LocalPicFiles::baseStr)
-
     override fun updateModel(json: JsonObject) {
         with(json) {
-            pf = string("path")?.let { LocalPicFiles(it) }
+            pf = string("path")?.let {
+                if (File(it).exists()) {
+                    logger.info("loading directory at $it")
+                    LocalPicFiles(it)
+                } else {
+                    logger.warn("tried to load directory $it that doesn't exist")
+                    null
+                }
+            }
         }
     }
 
@@ -133,6 +149,7 @@ localdirs=["g\:\\\\Dropbox\\\\Photos\\\\pics"]
         app.config.jsonArray("localDirs")?.let {
             picFiles = it
             for (path in picFiles) {
+
                 path.asJsonObject().toModel<PicFileModel>().pf?.let { picFiles1 -> allPicLibs.add(picFiles1) }
             }
         } ?: logger.warn("No local paths specified")
@@ -140,6 +157,7 @@ localdirs=["g\:\\\\Dropbox\\\\Photos\\\\pics"]
 }
 
 fun createConfig(app: App) {
+    return
     println("Creating config for ${InetAddress.getLocalHost().hostName}")
     val drop = "/Users/mstave/Dropbox"
     var two = "/Users/mstave/temp/sb.db"

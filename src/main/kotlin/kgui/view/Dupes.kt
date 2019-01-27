@@ -57,7 +57,7 @@ class DupeController : Controller() {
     var dupeStrings = ArrayList<String>().observable()
     var pfCount = SimpleIntegerProperty()
     fun getDupesFromAllLocalCollections(fxTask: FXTask<*>) {
-        val concatedPf = LocalPicFiles("")
+        val concatedPf = LocalPicFiles("/dev/null")
         fun updateStatus(completed: Long, total: Long, msg: String, title: String) {
             Platform.runLater {
                 if (msg != "")

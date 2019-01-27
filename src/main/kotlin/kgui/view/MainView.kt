@@ -11,6 +11,7 @@ class MainView : View("Pics") {
 
     init {
         logger.debug("MainView init")
+//        root.setPrefSize()
         with(root) {
             tab("Setup") {
                 this += find<SetupForm>()

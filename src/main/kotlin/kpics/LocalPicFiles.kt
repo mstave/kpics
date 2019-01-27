@@ -165,16 +165,12 @@ class LocalPicFiles(private val basePathStr: String) : AbstractPicCollection() {
      * @return  <<file1 file2><file3 file4 file5> ... >
      */
     private fun getDupes(): Set<Set<String>>? {
-        val dupeFiles = HashSet<HashSet<String>>()  // in order to facilitate multithreaded checking
         updateFunc?.invoke(0, filePaths.size.toLong(), "checking 1st based upon file sizes",
                            "Looking for duplicates")
         val dupeSizes = getDupeSizes(filePaths)
         logger.info("Based upon size, dupe count: ${dupeSizes.size}")
         // checksum -> [ set of files matching that checksum ]
         val dupeHash = getDupeHash(dupeSizes)
-        dupeHash.values.forEach {
-            dupeFiles.add(it.toHashSet())
-        }
         logger.info("After checking checksum of size-based dupes : ${dupeSizes.size}")
         return dupeHash.values.toSet()
     }
@@ -255,7 +251,6 @@ class LocalPicFiles(private val basePathStr: String) : AbstractPicCollection() {
     }
 
     fun getDupeFileList(): List<String>? {
-        // from
         return dupeFiles?.flatten()?.map { "$it : ${getDupesForFile(it)}" }?.sorted()
     }
 
@@ -276,11 +271,13 @@ class LocalPicFiles(private val basePathStr: String) : AbstractPicCollection() {
     }
 
     init {
-        logger.debug { "Starting file walk of $basePathStr" }
-        for (path in Files.walk(this.basePath)) {
-            if (filterImages(path)) filePaths.add(path)
+        if (File(basePathStr).exists()) {
+            logger.debug { "Starting file walk of $basePathStr" }
+            for (path in Files.walk(this.basePath)) {
+                if (filterImages(path)) filePaths.add(path)
+            }
+            logger.debug { "File walk complete, $count files found" }
         }
-        logger.debug { "File walk complete, $count files found" }
     }
 }
 

@@ -36,7 +36,6 @@ class SetupForm : View() {
         picDir?.let {
             val newPicCollection = LocalPicFiles(picDir.toString())
             addPicLibToForm(newPicCollection)
-            pCont.allPicLibs.add(LocalPicFiles(picDir.toString()))
         }
     }
 
@@ -47,9 +46,8 @@ class SetupForm : View() {
                 FileChooser.ExtensionFilter("db files", "*.db")), FileChooserMode.Multi)
         picDBs.let {
             picDBs.forEach { picDB ->
-                val newPicCollection = LocalPicFiles(picDB.toString())
+                val newPicCollection = LightroomDB(picDB.toString())
                 addPicLibToForm(newPicCollection)
-                pCont.allPicLibs.add(LightroomDB(picDB.toString()))
             }
         }
     }
@@ -89,5 +87,6 @@ class SetupForm : View() {
                 log.warning("broken config data")
             }
         }
+        pCont.allPicLibs.add(picL)
     }
 }

@@ -16,7 +16,7 @@ class Diffs : View("Differences") {
     private val imgPath = SimpleStringProperty()
     private val pCont: PicCollectionsController by inject()
     private val tv = tableview<CollectionsPerPic> {
-        prefHeight = 1000.0
+        prefHeight = 800.0
         refreshColumns()
         bindSelected(pCont.collectionsPerPicModel)
         pCont.allPicLibs.onChange {
