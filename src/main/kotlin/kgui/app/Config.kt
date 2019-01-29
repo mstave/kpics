@@ -17,13 +17,16 @@ import javax.json.JsonArray
 import javax.json.JsonObject
 
 /**
- * Aggregates picture paths from all sources into one data structure
+ * Which PicLibs contain a particular pic
  */
 data class CollectionsPerPic(
         var picFilePath: String,  // a particular picture
         var picLibBasePaths: ConcurrentSkipListSet<String?> // which piclibs (identified by its root) have this file
                             )
 
+/**
+ * Used to bind a collection to a View
+ */
 class CollectionsPerPicModel : ItemViewModel<CollectionsPerPic>() {
     val filePath = bind(CollectionsPerPic::picFilePath)
 }
@@ -31,7 +34,7 @@ class CollectionsPerPicModel : ItemViewModel<CollectionsPerPic>() {
 /**
  * Used for serializing PicDbs to JSON
  * In this file rather than alongside the source to
- * keep the TonadoFX stuff separate
+ * keep the TornadoFX stuff separate
  */
 class PicDBModel : JsonModel {
     private val logger: KLogger = KotlinLogging.logger {}
@@ -71,7 +74,9 @@ class PicFileModel(var pf: LocalPicFiles? = null) : JsonModel, ItemViewModel<Loc
             pf = string("path")?.let {
                 if (File(it).exists()) {
                     logger.info("loading directory at $it")
-                    LocalPicFiles(it)
+                    var temp = LocalPicFiles(it)
+                    logger.debug("finished loading directory at $it")
+                    temp
                 } else {
                     logger.warn("tried to load directory $it that doesn't exist")
                     null
@@ -88,33 +93,38 @@ class PicFileModel(var pf: LocalPicFiles? = null) : JsonModel, ItemViewModel<Loc
 }
 
 /**
- * All the data manipulation heavy lifting
+ * All the data manipulation heavy lifting, and coordinator between views
  */
 class PicCollectionsController : Controller() {
     private val logger: KLogger = KotlinLogging.logger {}
     // array of each of pic collection of any type in use in the app
     internal val allPicLibs = ArrayList<AbstractPicCollection>().observable()
-    val collectionsPerPicModel = CollectionsPerPicModel()
-    // for each path, which collection contains that pic?
+    // for each path, which collection contains that pic?  Used to build diffs
     private var collectionsPerPic = ConcurrentHashMap<String, CollectionsPerPic>()
+    // used for View.items, which want a List
     var diffs = ArrayList<CollectionsPerPic>().observable()
+    val selectedPicInUI = CollectionsPerPicModel()
+
     fun loadDiffs() {
         logger.info("Looking for differences, collection count ${allPicLibs.size}")
-        allPicLibs.parallelStream().forEach { p ->
-            p.relativePaths.parallelStream().forEach { pathVal ->
-                val exist = pathVal?.let {
+        // for each library
+        allPicLibs.parallelStream().forEach { picCollection ->
+            // for each picture in that library
+            picCollection.relativePaths.parallelStream().forEach { picPath->
+                val alreadyExists = picPath?.let {
                     collectionsPerPic.putIfAbsent(it,
-                                                  CollectionsPerPic(pathVal,
+                                                  CollectionsPerPic(picPath,
                                                                     ConcurrentSkipListSet(
-                                                                            setOf(p.baseStr))))
+                                                                            setOf(picCollection.baseStr))))
                 }
-                exist?.let {
-                    collectionsPerPic[pathVal]!!.picLibBasePaths.add(p.baseStr)
+                alreadyExists?.let {
+                    collectionsPerPic[picPath]!!.picLibBasePaths.add(picCollection.baseStr)
                 }
             }
-            logger.debug("----- Done: ${p.baseStr}")
+            logger.debug("----- Done: ${picCollection.baseStr}")
         }
         logger.debug("-----====  DIFF LOADING COMPLETE")
+        // Update on GUI thread
         Platform.runLater {
             diffs.addAll(collectionsPerPic.values)
         }
@@ -149,7 +159,6 @@ localdirs=["g\:\\\\Dropbox\\\\Photos\\\\pics"]
         app.config.jsonArray("localDirs")?.let {
             picFiles = it
             for (path in picFiles) {
-
                 path.asJsonObject().toModel<PicFileModel>().pf?.let { picFiles1 -> allPicLibs.add(picFiles1) }
             }
         } ?: logger.warn("No local paths specified")

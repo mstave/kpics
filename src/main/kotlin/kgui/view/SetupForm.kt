@@ -36,6 +36,7 @@ class SetupForm : View() {
         picDir?.let {
             val newPicCollection = LocalPicFiles(picDir.toString())
             addPicLibToForm(newPicCollection)
+            pCont.allPicLibs.add(newPicCollection)
         }
     }
 
@@ -48,13 +49,16 @@ class SetupForm : View() {
             picDBs.forEach { picDB ->
                 val newPicCollection = LightroomDB(picDB.toString())
                 addPicLibToForm(newPicCollection)
+                pCont.allPicLibs.add(newPicCollection)
             }
         }
     }
 
     private fun addPicLibsToForm() {
-        pCont.allPicLibs.forEach { picL ->
-            addPicLibToForm(picL)
+        synchronized(this) {
+            pCont.allPicLibs.forEach { picL ->
+                addPicLibToForm(picL)
+            }
         }
     }
 
@@ -87,6 +91,5 @@ class SetupForm : View() {
                 log.warning("broken config data")
             }
         }
-        pCont.allPicLibs.add(picL)
     }
 }

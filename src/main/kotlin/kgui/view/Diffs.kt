@@ -17,12 +17,12 @@ class Diffs : View("Differences") {
     private val pCont: PicCollectionsController by inject()
     private val tv = tableview<CollectionsPerPic> {
         prefHeight = 800.0
-        refreshColumns()
-        bindSelected(pCont.collectionsPerPicModel)
+        refreshData()
+        bindSelected(pCont.selectedPicInUI)
         pCont.allPicLibs.onChange {
             pCont.diffs.invalidate()
             pCont.loadDiffs()
-            refreshColumns()
+            refreshData()
         }
         onSelectionChange { sel ->
             imgV.image = null
@@ -39,7 +39,7 @@ class Diffs : View("Differences") {
         }
     }
 
-    private fun TableView<CollectionsPerPic>.refreshColumns() {
+    private fun TableView<CollectionsPerPic>.refreshData() {
         asyncItems { pCont.diffs }
         columns.clear()
         columnResizePolicy = SmartResize.POLICY
