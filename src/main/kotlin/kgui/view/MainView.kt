@@ -27,7 +27,6 @@ class MainView : View("Pics") {
             }
             tab("Dupes") {
                 this += dupes.root  // Arbitrarily inconsisent use of injected view rather than find<>
-                select()
             }
         }
         logger.info("with root complete")
