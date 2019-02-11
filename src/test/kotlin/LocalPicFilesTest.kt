@@ -131,7 +131,7 @@ internal class LocalPicFilesTest {
     @Test
     fun testRootForDupes() {
         val tp = getTestPics()
-        tp.getDupesForDir(tp.basePath).forEach {
+        tp.getDupesInDir(tp.basePath).forEach {
             println(it)
         }
     }
@@ -140,7 +140,8 @@ internal class LocalPicFilesTest {
         val testPics = getTestPics()
         val here =testPicsPath + File.separator+ "onlydupedhere"
         println(here)
-        val onlyHere = testPics.getDupesForDir(Paths.get(here))
+        val onlyHere = testPics.getDupesInDir(Paths.get(here))
+        assertEquals(4, onlyHere.size)
         println(onlyHere)
 //        /Users/mstave/Dropbox/dev/kpics/testdata/pics/onlydupedhere
     }
@@ -148,7 +149,7 @@ internal class LocalPicFilesTest {
     @Test
     fun testDirsWithAllDupes() {
         val testPics = getTestPics()
-        val dirsWithAllDupes: List<String> = testPics.getDirsWithAllDupes()
+        val dirsWithAllDupes: Set<String> = testPics.getDirsWithAllDupes()
         assertNotNull(dirsWithAllDupes)
         println(dirsWithAllDupes)
     }

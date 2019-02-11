@@ -102,7 +102,7 @@ class LocalPicFiles(private val basePathStr: String) : AbstractPicCollection() {
     fun getDupeDirStats(): DirDupeStats { // path: totalFileCount, dupeFileCount
         val fileByDir = filePaths.groupBy { it.parent }
         return fileByDir.map {filesForPath ->
-             val dupesForDir = getDupesForDir(filesForPath.key)
+             val dupesForDir = getDupesInDir(filesForPath.key)
             filesForPath.key.toString() to DirDupeStat(filesForPath.value.size,
                                             dupesForDir.size,
                                             dupesForDir.all { dupeForDir ->
@@ -130,21 +130,17 @@ class LocalPicFiles(private val basePathStr: String) : AbstractPicCollection() {
         return filePaths.map { it.toString() }.groupBy { getDir(it) }[path]
     }
 
-    fun getDupesForDir(dir: Path): ArrayList<Path> {
+    fun getDupesInDir(dir: Path): List<Path> {
         val dupes = dupeFileSets.flatten().map { Paths.get(it) }
-        return dupes.mapNotNullTo(ArrayList()) {
-            if (it.parent == dir) {
-                it
-            } else null
+        return dupes.filter {
+            it.parent == dir
         }
     }
 
-    fun getDirsWithAllDupes(): List<String> {
-        return getDupeDirStats().mapNotNull {
-            if (it.value.dupes == it.value.files) {
-                it.key
-            } else null
-        }
+    fun getDirsWithAllDupes(): Set<String> {
+        return getDupeDirStats().filter {
+            it.value.dupes == it.value.files
+        }.keys
     }
 
     /**
