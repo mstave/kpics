@@ -15,7 +15,10 @@ import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
 import kotlin.collections.set
 
-typealias DirDupeStats = HashMap<String, Pair<Int, Int>>
+data class DirDupeStat(var files: Int, var dupes: Int,
+                       var hasDupesElsewhere: Boolean)
+
+typealias DirDupeStats = Map<String, DirDupeStat>
 
 class LocalPicFiles(private val basePathStr: String) : AbstractPicCollection() {
     private val logger: KLogger = KotlinLogging.logger {}
@@ -51,9 +54,8 @@ class LocalPicFiles(private val basePathStr: String) : AbstractPicCollection() {
 
     override val paths: TreeSet<Path>
         get() = filePaths
-
     // <<path1, path2>, <path23, path99, path1234... >, ... >
-    val dupeFiles: Set<Set<String>>? by lazy(::getDupes)
+    val dupeFileSets: Set<Set<String>> by lazy(::getDupes)
 
     fun printFiles() {
         for (f in paths) {
@@ -86,6 +88,7 @@ class LocalPicFiles(private val basePathStr: String) : AbstractPicCollection() {
         }
         return false
     }
+
     /**
      * Some operations are long, this is a way to generically provide updates without
      * tying us to any specific framework, e.g. JavaFX Tasks
@@ -96,29 +99,23 @@ class LocalPicFiles(private val basePathStr: String) : AbstractPicCollection() {
                 logger.debug("%s : %s : completed %v of %v, ", msg, title, completed, total)
             }
 
-    fun getDirStats(): DirDupeStats { // path: totalFileCount, dupeFileCount
-        dupeFiles?.forEach { outer ->
-            println("-->")
-            outer.forEach {
-                println(it)
-            }
-        }
-        val result = HashMap<String, Pair<Int, Int>>()
-        filePaths.forEach { path ->
-            result[path.parent.toString()] =
-                    result[path.parent.toString()]?.let { Pair(it.first + 1, 0) } ?: Pair(1, 0)
-        }
-        dupeFiles?.flatten()?.forEach { pathStr ->
-            result[Paths.get(pathStr).parent.toString()] = Pair(
-                    result[Paths.get(pathStr).parent.toString()]!!.first,
-                    result[Paths.get(pathStr).parent.toString()]!!.second + 1)
-        }
-        return result
+    fun getDupeDirStats(): DirDupeStats { // path: totalFileCount, dupeFileCount
+        val fileByDir = filePaths.groupBy { it.parent }
+        return fileByDir.map {filesForPath ->
+             val dupesForDir = getDupesForDir(filesForPath.key)
+            filesForPath.key.toString() to DirDupeStat(filesForPath.value.size,
+                                            dupesForDir.size,
+                                            dupesForDir.all { dupeForDir ->
+                                                dupeForDir.parent == filesForPath.key
+                                            })
+        }.toMap()
     }
 
+    private fun getDir(path: Path) = path.parent.toString()
+    private fun getDir(pathStr: String) = Paths.get(pathStr).parent.toString()
     fun getDupesForFile(fName: String): ArrayList<String> {
         val result = ArrayList<String>()
-        dupeFiles?.forEach { dupeList ->
+        dupeFileSets.forEach { dupeList ->
             if (dupeList.contains(fName)) {
                 result.addAll(dupeList.filter {
                     it != fName
@@ -128,43 +125,34 @@ class LocalPicFiles(private val basePathStr: String) : AbstractPicCollection() {
         return result
     }
 
-    fun getDupesForDir(dir: String): ArrayList<String> {
-        val result = ArrayList<String>()
-        val dupes = dupeFiles?.flatten()
-        val files = File(dir).listFiles()
-        files.forEach { it ->
-            if (it.isFile) {
-                dupes?.let {
-                    if (it.contains(it.toString())) {
-                        result.add(it.toString())
-                    } else {
-                        println(it.toString())
-                    }
-                }
-            }
-        }
-        println("------------")
-        return result
+    fun getPicsForDir(path: String): List<String>? {
+        // TODO cache most of next op if it's expensive
+        return filePaths.map { it.toString() }.groupBy { getDir(it) }[path]
     }
 
-    fun getDirsWithAllDupes(): ArrayList<String> {
-        val retval = ArrayList<String>()
-        val res = getDirStats()
-        println(res)
-        res.forEach {
-            if (it.value.first == it.value.second) {
-                retval.add(it.key)
-            }
+    fun getDupesForDir(dir: Path): ArrayList<Path> {
+        val dupes = dupeFileSets.flatten().map { Paths.get(it) }
+        return dupes.mapNotNullTo(ArrayList()) {
+            if (it.parent == dir) {
+                it
+            } else null
         }
-        return retval
+    }
+
+    fun getDirsWithAllDupes(): List<String> {
+        return getDupeDirStats().mapNotNull {
+            if (it.value.dupes == it.value.files) {
+                it.key
+            } else null
+        }
     }
 
     /**
      * For files in this.filePaths, determine which are duplicates
-     * use this.dupeFiles (which calls this) which will auto-memoize this expensive operation
-     * @return  <<file1 file2><file3 file4 file5> ... >
+     * use this.dupeFileSets (which calls this) which will auto-memoize this expensive operation
+     * @return  <<file1 file2><file3 file4 file5> ... cw
      */
-    private fun getDupes(): Set<Set<String>>? {
+    private fun getDupes(): Set<Set<String>> {
         updateFunc?.invoke(0, filePaths.size.toLong(), "checking 1st based upon file sizes",
                            "Looking for duplicates")
         val dupeSizes = getDupeSizes(filePaths)
@@ -251,7 +239,7 @@ class LocalPicFiles(private val basePathStr: String) : AbstractPicCollection() {
     }
 
     fun getDupeFileList(): List<String>? {
-        return dupeFiles?.flatten()?.map { "$it : ${getDupesForFile(it)}" }?.sorted()
+        return dupeFileSets.flatten().map { "$it : ${getDupesForFile(it)}" }.sorted()
     }
 
     fun rootDupes(
@@ -264,7 +252,7 @@ class LocalPicFiles(private val basePathStr: String) : AbstractPicCollection() {
             it.value.forEach { inner ->
                 if (inner.parent == basePath) {
                     rootDupes.add(inner)
-                    println("ROOT " + inner.toString())
+                    println("ROOT $inner")
                 }
             }
         }
@@ -323,7 +311,7 @@ fun getMD5(path: Path): String {
 }
 
 var dbpaths = java.util.concurrent.ConcurrentSkipListSet<Path>()
-fun main(args: Array<String>) {
+fun main() {
 //    var unique =  Collections.synchronizedSet(HashSet<String>())
 //    println(kpics.getMD5(Paths.get("/Users/mstave/Dropbox/Photos/pics/uk/save/one0100.jpg")))
 //    println(kpics.getMD5(Paths.get("/Users/mstave/Dropbox/Photos/pics/one0100.jpg")))

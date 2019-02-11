@@ -135,13 +135,13 @@ internal class LightroomDBTest {
                     AgLibraryFolder.innerJoin(
                             AgLibraryFile).select { AgLibraryFile.extension eq "MP4" }
                                             ).toList().distinct()
-            logger.debug("Folder: " + folderQ.toString())
+            logger.debug("Folder: $folderQ")
             folderQ.forEach { logger.debug(it.toString()) }
             val fileQ = LibFile.wrapRows(
                     AgLibraryFolder.innerJoin(
                             AgLibraryFile).select { AgLibraryFile.extension eq "MP4" }
                                         ).toList()
-            logger.debug("File: " + fileQ.toString())
+            logger.debug("File: $fileQ")
         }
     }
 

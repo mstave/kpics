@@ -74,7 +74,7 @@ class PicFileModel(var pf: LocalPicFiles? = null) : JsonModel, ItemViewModel<Loc
             pf = string("path")?.let {
                 if (File(it).exists()) {
                     logger.info("loading directory at $it")
-                    var temp = LocalPicFiles(it)
+                    val temp = LocalPicFiles(it)
                     logger.debug("finished loading directory at $it")
                     temp
                 } else {

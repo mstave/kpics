@@ -53,7 +53,7 @@ class ExifController : ItemViewModel<ExifGroup>() {
 class ExifView : View() {
     //    val imgFilePath : String by param()
     val xCont: ExifController by inject()
-    override val root = scrollpane(true, true)
+    override val root = scrollpane(fitToWidth = true, fitToHeight = true)
 
     init {
 //        vbox {

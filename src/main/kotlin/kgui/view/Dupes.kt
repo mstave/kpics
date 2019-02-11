@@ -22,42 +22,44 @@ class Dupes : View() {
     private val status: TaskStatus by inject()
     // TODO pass status to dupeC then have dupeC handle the picCollectionsCont.allPicLibs.onChange
     override val root = scrollpane(fitToWidth = true, fitToHeight = true) {
-        hbox {
-            titleProperty.bind(status.title)
-            progressindicator {
-                minWidth = 100.0
-                bind(status.progress)
-            }
-            vbox {
-                label(Bindings.concat("Looking for duplicates among ", dupeC.pfCount, " files."))
-                label(status.title)
-                label(status.message)
-            }
-            visibleWhen(status.running)
-            managedWhen(status.running)
-        }
         vbox {
-            visibleWhen(!status.running)
-            managedWhen(!status.running)
-            text("Directories with all files duplicated")
+            hbox {
+                titleProperty.bind(status.title)
+                progressindicator {
+                    minWidth = 100.0
+                    bind(status.progress)
+                }
+                vbox {
+                    label(Bindings.concat("Looking for duplicates among ", dupeC.pfCount, " files."))
+                    label(status.title)
+                    label(status.message)
+                }
+                visibleWhen(status.running)
+                managedWhen(status.running)
+            }
             vbox {
-                listview(dupeC.dupeDirs) {
-                    vgrow = Priority.SOMETIMES
-                    items.onChange {
+                visibleWhen(!status.running)
+                managedWhen(!status.running)
+                text("Directories with all files duplicated")
+                vbox {
+                    listview(dupeC.dupeDirs) {
+                        vgrow = Priority.SOMETIMES
+                        items.onChange {
+                            updateHeight()
+                        }
                         updateHeight()
                     }
-                    updateHeight()
-                }
-                text("Files")
-                listview<String> {
-                    items = dupeC.dupeStrings
-                    prefWidth = 300.0
-                    minHeight = 600.0
-                    vgrow = Priority.ALWAYS
-                    dupeC.picCollectionsCont.allPicLibs.onChange {
+                    text("Files")
+                    listview<String> {
+                        items = dupeC.dupeStrings
+                        prefWidth = 300.0
+                        minHeight = 600.0
+                        vgrow = Priority.ALWAYS
+                        dupeC.picCollectionsCont.allPicLibs.onChange {
+                            updateDiffs()
+                        }
                         updateDiffs()
                     }
-                    updateDiffs()
                 }
             }
         }
@@ -99,13 +101,13 @@ class DupeController : Controller() {
         }
         concatedPf.updateFunc = ::updateStatus
         // prime cache
-        val duration = measureTimeMillis { concatedPf.dupeFiles }
+        val duration = measureTimeMillis { concatedPf.dupeFileSets }
         logger.info("done looking for dupes, took ${duration / 1000} seconds")
         Platform.runLater {
             // will get from cache
             concatedPf.getDupeFileList()?.let {
                 dupeStrings.addAll(it)
-                dupeDirs.addAll(concatedPf.getDirsWithAllDupes())
+                dupeDirs.addAll(concatedPf.getDirsWithAllDupes().sorted())
             }
             doneSearching.set(true)
         }

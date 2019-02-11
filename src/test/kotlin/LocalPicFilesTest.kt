@@ -1,3 +1,4 @@
+
 import kotlinx.coroutines.*
 import kpics.LocalPicFiles
 import mu.KotlinLogging
@@ -5,6 +6,7 @@ import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.junit.jupiter.api.Test
 import java.io.File
+import java.nio.file.Paths
 
 internal class LocalPicFilesTest {
     private val logger = KotlinLogging.logger {}
@@ -24,19 +26,19 @@ internal class LocalPicFilesTest {
 
 //        println("${testPicsPath + File.separator}rootdupe")
         assertNotNull(theDupes)
-        if (theDupes.size == 0) {
+        if (theDupes.isEmpty()) {
             println(theDupes)
-            println(getTestPics().getDirStats())
+            println(getTestPics().getDupeDirStats())
         }
-        assertEquals(1, theDupes.size)
-        assertEquals("${testPicsPath + File.separator}rootdupe", theDupes[0])
+        assertEquals(2, theDupes.size)
+        assertTrue(theDupes.contains("${testPicsPath + File.separator}rootdupe"))
     }
 
     @Test
     fun testDupes() {
-        val dupes = getTestPics().dupeFiles
+        val dupes = getTestPics().dupeFileSets
         assertNotNull(dupes)
-        assertEquals(2, dupes!!.size)
+        assertEquals(4, dupes.size)
     }
     @Test
     fun myTestDupes() {
@@ -46,9 +48,9 @@ internal class LocalPicFilesTest {
 
         }
         assumeTrue(File(myPath).exists())
-        val dupes = LocalPicFiles(myPath).dupeFiles
+        val dupes = LocalPicFiles(myPath).dupeFileSets
         assertNotNull(dupes)
-        assertEquals(1371, dupes!!.size)
+        assertEquals(1371, dupes.size)
 //        assertEquals(2, dupes!!.size)
     }
 
@@ -65,9 +67,9 @@ internal class LocalPicFilesTest {
    @Test
     fun testChecksumUnique() {
         val pics = getTestPics()
-        val dupe = pics.dupeFiles
+        val dupe = pics.dupeFileSets
         assertNotNull(dupe)
-        assertTrue(dupe!!.size > 0)
+        assertTrue(dupe.isNotEmpty())
     }
 
     @Test
@@ -90,27 +92,27 @@ internal class LocalPicFilesTest {
     @Test
     fun testDupeMemoize() {
         val pf = getTestPics()
-        val d1 = GlobalScope.async(Dispatchers.Default, CoroutineStart.DEFAULT, null, { pf.dupeFiles })
-        val d2 = GlobalScope.async(Dispatchers.Default, CoroutineStart.DEFAULT, null, { pf.dupeFiles })
+        val d1 = GlobalScope.async(Dispatchers.Default, CoroutineStart.DEFAULT, null, { pf.dupeFileSets })
+        val d2 = GlobalScope.async(Dispatchers.Default, CoroutineStart.DEFAULT, null, { pf.dupeFileSets })
         runBlocking {
-            println(d1.await()?.size)
-            println(d2.await()?.size)
+            println(d1.await().size)
+            println(d2.await().size)
             assertNotNull(d1)
             assertNotNull(d2)
-            assertTrue(d1.await()?.size!! > 0)
+            assertTrue(d1.await().size > 0)
         }
     }
 
     @Test
     fun testForEachDupe() {
-        getTestPics().dupeFiles?.forEach {
+        getTestPics().dupeFileSets.forEach {
             println(it)
         }
     }
 
     @Test
     fun testGetDupeFileList() {
-        assertEquals(6, getTestPics().getDupeFileList()?.size)
+        assertEquals(10, getTestPics().getDupeFileList()?.size)
     }
 
     @Test
@@ -122,21 +124,37 @@ internal class LocalPicFilesTest {
 
     @Test
     fun testGetDirStats() {
-        val res = getTestPics().getDirStats()
+        val res = getTestPics().getDupeDirStats()
         println(res.toString())
     }
 
     @Test
     fun testRootForDupes() {
         val tp = getTestPics()
-        tp.getDupesForDir(tp.basePath.toString()).forEach {
+        tp.getDupesForDir(tp.basePath).forEach {
             println(it)
         }
     }
+    @Test
+    fun testGetDupesForDir() {
+        val testPics = getTestPics()
+        val here =testPicsPath + File.separator+ "onlydupedhere"
+        println(here)
+        val onlyHere = testPics.getDupesForDir(Paths.get(here))
+        println(onlyHere)
+//        /Users/mstave/Dropbox/dev/kpics/testdata/pics/onlydupedhere
+    }
 
+    @Test
+    fun testDirsWithAllDupes() {
+        val testPics = getTestPics()
+        val dirsWithAllDupes: List<String> = testPics.getDirsWithAllDupes()
+        assertNotNull(dirsWithAllDupes)
+        println(dirsWithAllDupes)
+    }
     //    @Test
     fun printDupesByDir() {
-        getTestPics().getDirStats().forEach {
+        getTestPics().getDupeDirStats().forEach {
             println(it)
         }
     }
