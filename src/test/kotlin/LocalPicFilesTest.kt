@@ -1,4 +1,3 @@
-
 import kotlinx.coroutines.*
 import kpics.LocalPicFiles
 import mu.KotlinLogging
@@ -14,7 +13,7 @@ internal class LocalPicFilesTest {
     companion object {
         private val testPicsPath = System.getProperty("user.dir") +
                                    File.separator + "testdata" + File.separator + "pics"
-        private val testPF =  LocalPicFiles(testPicsPath)
+        private val testPF = LocalPicFiles(testPicsPath)
         fun getTestPics(): LocalPicFiles {
             return testPF
         }
@@ -23,7 +22,6 @@ internal class LocalPicFilesTest {
     @Test
     fun testGetDirsWithAllDupes() {
         val theDupes = getTestPics().getDirsWithAllDupes()
-
 //        println("${testPicsPath + File.separator}rootdupe")
         assertNotNull(theDupes)
         if (theDupes.isEmpty()) {
@@ -40,12 +38,12 @@ internal class LocalPicFilesTest {
         assertNotNull(dupes)
         assertEquals(4, dupes.size)
     }
+
     @Test
     fun myTestDupes() {
         var myPath = "/Users/mstave/Dropbox/photos/pics"
         if (System.getProperty("os.name").startsWith("Windows")) {
             myPath = "f:/Dropbox.old/photos/pics"
-
         }
         assumeTrue(File(myPath).exists())
         val dupes = LocalPicFiles(myPath).dupeFileSets
@@ -64,7 +62,7 @@ internal class LocalPicFilesTest {
         }
     }
 
-   @Test
+    @Test
     fun testChecksumUnique() {
         val pics = getTestPics()
         val dupe = pics.dupeFileSets
@@ -135,10 +133,11 @@ internal class LocalPicFilesTest {
             println(it)
         }
     }
+
     @Test
     fun testGetDupesForDir() {
         val testPics = getTestPics()
-        val here =testPicsPath + File.separator+ "onlydupedhere"
+        val here = testPicsPath + File.separator + "onlydupedhere"
         println(here)
         val onlyHere = testPics.getDupesInDir(Paths.get(here))
         assertEquals(4, onlyHere.size)
@@ -151,19 +150,33 @@ internal class LocalPicFilesTest {
         val testPics = getTestPics()
         val dirsWithAllDupes: Set<String> = testPics.getDirsWithAllDupes()
         assertNotNull(dirsWithAllDupes)
-        println(dirsWithAllDupes)
+        var pass = false
+        dirsWithAllDupes.forEach {
+            if (it.contains("rootdupe")) {
+                pass = true
+            }
+        }
+        assertTrue(pass)
     }
-    //    @Test
+
+    @Test
     fun printDupesByDir() {
         getTestPics().getDupeDirStats().forEach {
-            println(it)
+            if (it.key.endsWith("/pics")) {
+                assertTrue(it.value.hasDupesElsewhere)
+            }
+            if (it.key.contains("rootdupe")) {
+                assertTrue(it.value.hasDupesElsewhere)
+            }
+            if (it.key.contains("onlydupedhere")) {
+                assertFalse(it.value.hasDupesElsewhere)
+            }
         }
     }
 
     @Test
     fun testWin() {
         assumeTrue(System.getProperty("os.name").startsWith("Windows"))
-
     }
 
     @Test

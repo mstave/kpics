@@ -99,20 +99,29 @@ class LocalPicFiles(private val basePathStr: String) : AbstractPicCollection() {
                 logger.debug("%s : %s : completed %v of %v, ", msg, title, completed, total)
             }
 
-    fun getDupeDirStats(): DirDupeStats { // path: totalFileCount, dupeFileCount
+    fun getDupeDirStats(): DirDupeStats { // path:  DirDupeStat(var files: Int, var dupes: Int, var hasDupesElsewhere: Boolean)
         val fileByDir = filePaths.groupBy { it.parent }
-        return fileByDir.map {filesForPath ->
-             val dupesForDir = getDupesInDir(filesForPath.key)
+        return fileByDir.map { filesForPath ->
+            val dupesForDir = getDupesInDir(filesForPath.key)
             filesForPath.key.toString() to DirDupeStat(filesForPath.value.size,
-                                            dupesForDir.size,
-                                            dupesForDir.all { dupeForDir ->
-                                                dupeForDir.parent == filesForPath.key
-                                            })
+                                                       dupesForDir.size,
+                                                       !dupesForDir.all { dupeForDir ->
+                                                           // for every file that's a dupe in this dir
+                                                           getDupesForPath(dupeForDir).all {otherDupe ->
+                                                               dupeForDir.parent == otherDupe.parent
+                                                           }
+                                                       })
         }.toMap()
     }
 
     private fun getDir(path: Path) = path.parent.toString()
     private fun getDir(pathStr: String) = Paths.get(pathStr).parent.toString()
+    fun getDupesForPath(path: Path): List<Path> {
+        val strResult = getDupesForFile(path.toString())
+        return strResult.map {
+            Paths.get(it)
+        }
+    }
     fun getDupesForFile(fName: String): ArrayList<String> {
         val result = ArrayList<String>()
         dupeFileSets.forEach { dupeList ->
@@ -238,9 +247,7 @@ class LocalPicFiles(private val basePathStr: String) : AbstractPicCollection() {
         return dupeFileSets.flatten().map { "$it : ${getDupesForFile(it)}" }.sorted()
     }
 
-    fun rootDupes(
-            dupes: ConcurrentHashMap<String, ConcurrentSkipListSet<Path>>
-                 ) {
+    fun rootDupes(dupes: ConcurrentHashMap<String, ConcurrentSkipListSet<Path>>) {
         val rootDupes = ConcurrentSkipListSet<Path>()
         dupes.forEach {
             val paths = it.value.toString()
