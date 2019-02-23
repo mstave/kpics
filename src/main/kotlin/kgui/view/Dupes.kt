@@ -40,8 +40,9 @@ class Dupes : View() {
             vbox {
                 visibleWhen(!status.running)
                 managedWhen(!status.running)
-                text("Directories with all files duplicated")
                 vbox {
+                    text(Bindings.concat(" Directories with all dupes (",
+                                         dupeC.dupeDirCount,")"))
                     listview(dupeC.dupeDirs) {
                         vgrow = Priority.SOMETIMES
                         items.onChange {
@@ -49,7 +50,19 @@ class Dupes : View() {
                         }
                         updateHeight()
                     }
-                    text("Files")
+                    /*
+                    text(Bindings.concat(
+                            " Directories with all dupes with some/all of those dupes in other directories (",
+                            dupeC.dupeDirElsewhereCount, ")"))
+                    listview(dupeC.dupeElsewhereDirs) {
+                        vgrow = Priority.SOMETIMES
+                        items.onChange {
+                            updateHeight()
+                        }
+                        updateHeight()
+                    }
+                    */
+                    text(Bindings.concat(" Duplicated Files (", dupeC.dupeCount,")"))
                     listview<String> {
                         items = dupeC.dupeStrings
                         prefWidth = 300.0
@@ -79,7 +92,11 @@ class DupeController : Controller() {
     var doneSearching = SimpleBooleanProperty(false)
     var dupeStrings = ArrayList<String>().observable()
     val dupeDirs = ArrayList<String>().observable()
+    val dupeElsewhereDirs = ArrayList<String>().observable()
     var pfCount = SimpleIntegerProperty()
+    var dupeCount = SimpleIntegerProperty()
+    var dupeDirCount = SimpleIntegerProperty()
+    var dupeDirElsewhereCount = SimpleIntegerProperty()
     fun getDupesFromAllLocalCollections(fxTask: FXTask<*>) {
         val concatedPf = LocalPicFiles("/dev/null")
         fun updateStatus(completed: Long, total: Long, msg: String, title: String) {
@@ -108,6 +125,10 @@ class DupeController : Controller() {
             concatedPf.getDupeFileList()?.let {
                 dupeStrings.addAll(it)
                 dupeDirs.addAll(concatedPf.getDirsWithAllDupes().sorted())
+                dupeElsewhereDirs.addAll(concatedPf.getDirsWithAllDupesElsewhere().sorted())
+                dupeCount.set(dupeStrings.size)
+                dupeDirCount.set(dupeDirs.size)
+                dupeDirElsewhereCount.set(dupeElsewhereDirs.size)
             }
             doneSearching.set(true)
         }

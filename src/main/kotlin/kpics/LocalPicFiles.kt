@@ -145,7 +145,11 @@ class LocalPicFiles(private val basePathStr: String) : AbstractPicCollection() {
             it.parent == dir
         }
     }
-
+    fun getDirsWithAllDupesElsewhere(): Set<String> {
+        return getDupeDirStats().filter {
+            (it.value.dupes == it.value.files) && it.value.hasDupesElsewhere
+        }.keys
+    }
     fun getDirsWithAllDupes(): Set<String> {
         return getDupeDirStats().filter {
             it.value.dupes == it.value.files
