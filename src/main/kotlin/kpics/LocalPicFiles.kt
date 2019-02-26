@@ -248,7 +248,8 @@ class LocalPicFiles(private val basePathStr: String) : AbstractPicCollection() {
     }
 
     fun getDupeFileList(): List<String>? {
-        return dupeFileSets.flatten().map { "$it : ${getDupesForFile(it)}" }.sorted()
+        return dupeFileSets.flatten().distinct().sorted()
+//        return dupeFileSets.flatten().map { "$it : ${getDupesForFile(it)}" }.sorted()
     }
 
     fun rootDupes(dupes: ConcurrentHashMap<String, ConcurrentSkipListSet<Path>>) {

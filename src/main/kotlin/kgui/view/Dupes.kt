@@ -4,6 +4,7 @@ import javafx.application.Platform
 import javafx.beans.binding.Bindings
 import javafx.beans.property.SimpleBooleanProperty
 import javafx.beans.property.SimpleIntegerProperty
+import javafx.beans.property.SimpleStringProperty
 import javafx.scene.control.ListView
 import javafx.scene.layout.Priority
 import kgui.app.PicCollectionsController
@@ -11,6 +12,7 @@ import kpics.LocalPicFiles
 import mu.KLogger
 import mu.KotlinLogging
 import tornadofx.*
+import java.nio.file.Paths
 import java.util.*
 import kotlin.math.max
 import kotlin.math.min
@@ -18,8 +20,40 @@ import kotlin.system.measureTimeMillis
 
 class Dupes : View() {
     val dupeC: DupeController by inject()
+    //                            minHeight = 600.0
     private val logger: KLogger = KotlinLogging.logger {}
     private val status: TaskStatus by inject()
+    private val dupeDirView = listview(dupeC.dupeDirs) {
+        bindSelected(dupeC.selectedDir)
+//        updateHeight()
+    }
+    private val allDupeFileView = listview(dupeC.dupeStrings) {
+        multiSelect(true)
+        dupeC.selectedFiles.setAll(selectionModel.selectedItems)
+//                        vgrow = Priority.ALWAYS
+//                        selectionModel.selectedItems.onChange {
+////                            selectedFiles
+//                        }
+//                        this.selectionModel.
+//                            selectedFiles = selectionModel.selectedItems
+        dupeC.selectedDir.onChange { _ ->
+            selectWhere {
+                it.startsWith(dupeC.selectedDir.get())
+            }
+//                            selectedFiles.setAll(selectionModel.selectedItems)
+            //                           items.forEach {
+            //                               if (it.startsWith(selectedDir.get())) {
+            //                                   selectionModel.selectedItems.add(it)
+            //                               }
+            //                           }
+        }
+        dupeC.picCollectionsCont.allPicLibs.onChange {
+            updateDiffs()
+        }
+        updateDiffs()
+    }
+    private val defaultWidth = 600.0
+    //    val selectedFiles = SimpleListProperty<String>()
     // TODO pass status to dupeC then have dupeC handle the picCollectionsCont.allPicLibs.onChange
     override val root = scrollpane(fitToWidth = true, fitToHeight = true) {
         vbox {
@@ -40,43 +74,85 @@ class Dupes : View() {
             vbox {
                 visibleWhen(!status.running)
                 managedWhen(!status.running)
-                vbox {
-                    text(Bindings.concat(" Directories with all dupes (",
-                                         dupeC.dupeDirCount,")"))
-                    listview(dupeC.dupeDirs) {
-                        vgrow = Priority.SOMETIMES
-                        items.onChange {
-                            updateHeight()
+                titledpane("Select duplicated files:") {
+//                    hgrow = Priority.
+                    hbox {
+                        titledpane(Bindings.concat(" Directories with all dupes (",
+                                                   dupeC.dupeDirCount, ")")) {
+                            prefWidth=defaultWidth
+                            vbox {
+                                hbox {
+                                    button("Select") {
+                                        tooltip("Add all files in the chosen directories to selected list")
+                                        action {
+                                            dupeC.selectedFiles.addAll(dupeC.concatedPf.getDupesInDir(
+                                                    Paths.get(dupeC.selectedDir.value)).map { it.toString() })
+                                            dupeC.selectedFiles.sort()
+                                        }
+                                    }
+                                    button("Deselect files from this directory") {
+                                        action {
+                                            dupeC.selectedFiles.removeAll(dupeC.concatedPf.getDupesInDir(
+                                                    Paths.get(dupeC.selectedDir.value)).map { it.toString() })
+                                            dupeC.selectedFiles.sort()
+                                        }
+                                    }
+                                    button("Clear selection") {
+                                        action {
+                                            dupeDirView.selectionModel.clearSelection()
+                                        }
+                                    }
+                                }
+                                this += dupeDirView
+                            }
                         }
-                        updateHeight()
+                        titledpane(Bindings.concat(" All Duplicated Files (", dupeC.dupeCount, ")")) {
+//                            hgrow = Priority.SOMETIMES
+                            prefWidth = defaultWidth
+                            vbox {
+                                hbox {
+                                    button("Add") {
+                                        tooltip("Add these files to selected list")
+                                        action {
+                                            dupeC.selectedFiles.addAll(dupeC.selectedFromAllFiles)
+                                        }
+                                    }
+                                    button("clear") {
+                                        action {
+                                            allDupeFileView.selectionModel.clearSelection()
+                                        }
+                                    }
+                                }
+                                this += allDupeFileView
+                            }
+                        }
                     }
-                    /*
-                    text(Bindings.concat(
-                            " Directories with all dupes with some/all of those dupes in other directories (",
-                            dupeC.dupeDirElsewhereCount, ")"))
-                    listview(dupeC.dupeElsewhereDirs) {
-                        vgrow = Priority.SOMETIMES
-                        items.onChange {
-                            updateHeight()
+                }
+                titledpane("Act upon selected duplicated files:") {
+                    hbox {
+                        titledpane(Bindings.concat(" Selected Duplicated Files (", dupeC.dupeCount, ")")) {
+                            prefWidth= defaultWidth
+                            listview(dupeC.selectedFiles) {
+                                vgrow = Priority.SOMETIMES
+                            }
                         }
-                        updateHeight()
-                    }
-                    */
-                    text(Bindings.concat(" Duplicated Files (", dupeC.dupeCount,")"))
-                    listview<String> {
-                        items = dupeC.dupeStrings
-                        prefWidth = 300.0
-                        minHeight = 600.0
-                        vgrow = Priority.ALWAYS
-                        dupeC.picCollectionsCont.allPicLibs.onChange {
-                            updateDiffs()
+                        titledpane("Duplicates of selected files") {
+                            prefWidth= defaultWidth
+                            listview<String> {
+                                fitToParentSize()
+                                dupeC.selectedFiles.onChange { sFiles ->
+                                    items.setAll(sFiles.list.flatMap {
+                                        dupeC.concatedPf.getDupesForFile(it)
+                                    }.sorted())
+                                }
+                            }
                         }
-                        updateDiffs()
                     }
                 }
             }
         }
     }
+
 
     private fun ListView<String>.updateHeight() {
         val rowHeight = 24
@@ -97,8 +173,12 @@ class DupeController : Controller() {
     var dupeCount = SimpleIntegerProperty()
     var dupeDirCount = SimpleIntegerProperty()
     var dupeDirElsewhereCount = SimpleIntegerProperty()
+    val selectedDir = SimpleStringProperty("")
+    var selectedFiles = observableList<String>()
+    var selectedFromAllFiles = observableList<String>()
+    val concatedPf = LocalPicFiles("/dev/null")
     fun getDupesFromAllLocalCollections(fxTask: FXTask<*>) {
-        val concatedPf = LocalPicFiles("/dev/null")
+        //        val concatedPf = LocalPicFiles("/dev/null")
         fun updateStatus(completed: Long, total: Long, msg: String, title: String) {
             Platform.runLater {
                 if (msg != "")
