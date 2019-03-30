@@ -107,7 +107,7 @@ class LocalPicFiles(private val basePathStr: String) : AbstractPicCollection() {
                                                        dupesForDir.size,
                                                        !dupesForDir.all { dupeForDir ->
                                                            // for every file that's a dupe in this dir
-                                                           getDupesForPath(dupeForDir).all {otherDupe ->
+                                                           getDupesForPath(dupeForDir).all { otherDupe ->
                                                                dupeForDir.parent == otherDupe.parent
                                                            }
                                                        })
@@ -122,6 +122,7 @@ class LocalPicFiles(private val basePathStr: String) : AbstractPicCollection() {
             Paths.get(it)
         }
     }
+
     fun getDupesForFile(fName: String): ArrayList<String> {
         val result = ArrayList<String>()
         dupeFileSets.forEach { dupeList ->
@@ -145,17 +146,21 @@ class LocalPicFiles(private val basePathStr: String) : AbstractPicCollection() {
             it.parent == dir
         }
     }
+
     fun getDirsWithAllDupesElsewhere(): Set<String> {
         return getDupeDirStats().filter {
             (it.value.dupes == it.value.files) && it.value.hasDupesElsewhere
         }.keys
     }
+
     fun getDirsWithAllDupes(): Set<String> {
         return getDupeDirStats().filter {
             it.value.dupes == it.value.files
         }.keys
     }
 
+    val cacheName = "cache.dat"
+    var hashCache = HashMap<String, String>()
     /**
      * For files in this.filePaths, determine which are duplicates
      * use this.dupeFileSets (which calls this) which will auto-memoize this expensive operation
@@ -213,7 +218,11 @@ class LocalPicFiles(private val basePathStr: String) : AbstractPicCollection() {
      */
     private fun getDupeHash(priorDupes: Map<Long, ConcurrentSkipListSet<String>>):
             Map<String, Set<String>> {
-        val allDupeHashes = ConcurrentHashMap<String, ConcurrentSkipListSet<String>>()
+        var allDupeHashes = ConcurrentHashMap<String, ConcurrentSkipListSet<String>>()
+        val cacheFile = "hash_cache.dat"
+        if (File(cacheFile).exists()) {
+            return getCache(cacheFile, priorDupes)
+        }
         logger.info("starting hash-based dupe check")
         // for each set of files that are of the same size
         val sizeGroupCount = priorDupes.values.size.toLong()
@@ -244,7 +253,38 @@ class LocalPicFiles(private val basePathStr: String) : AbstractPicCollection() {
             }
         }
         logger.info("complete: hash-based dupe check")
+        ObjectOutputStream(FileOutputStream(cacheFile)).use {
+            it.writeObject(allDupeHashes)
+        }
         return allDupeHashes
+    }
+
+    private fun getCache(cacheFile: String,
+                         priorDupes: Map<Long, ConcurrentSkipListSet<String>>): Map<String, Set<String>>{
+        val cacheDate = File(cacheFile).lastModified()
+        logger.info("loading file data from cache: $cacheFile")
+        priorDupes.forEach { entry ->
+            entry.value.forEach {
+                if (File(it).lastModified() > cacheDate) {
+                    File(cacheFile).delete()
+                    return getDupeHash(priorDupes)
+                }
+            }
+        }
+        var cachedDupeHashes = ConcurrentHashMap<String, ConcurrentSkipListSet<String>>()
+        ObjectInputStream(FileInputStream(cacheFile)).use { inputStream ->
+            val result: Any = inputStream.readObject()
+            cachedDupeHashes = result as ConcurrentHashMap<String, ConcurrentSkipListSet<String>>
+        }
+        cachedDupeHashes.forEach { entry ->
+            entry.value.forEach {
+                if (!File(it).exists() || File(it).lastModified() > cacheDate) {
+                    File(cacheFile).delete()
+                    return getDupeHash(priorDupes)
+                }
+            }
+        }
+        return cachedDupeHashes
     }
 
     fun getDupeFileList(): List<String>? {
@@ -274,6 +314,21 @@ class LocalPicFiles(private val basePathStr: String) : AbstractPicCollection() {
             }
             logger.debug { "File walk complete, $count files found" }
         }
+    }
+}
+
+@Synchronized
+fun writeCache(fileName: String, map: Map<String, String>) {
+    ObjectOutputStream(FileOutputStream(fileName)).use {
+        it.writeObject(map)
+    }
+}
+
+@Synchronized
+fun readCache(fileName: String): Map<String, String> {
+    ObjectInputStream(FileInputStream(fileName)).use {
+        val result: Any = it.readObject()
+        return result as Map<String, String>
     }
 }
 

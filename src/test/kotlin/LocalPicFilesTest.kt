@@ -1,5 +1,7 @@
 import kotlinx.coroutines.*
 import kpics.LocalPicFiles
+import kpics.readCache
+import kpics.writeCache
 import mu.KotlinLogging
 import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.Assumptions.assumeTrue
@@ -198,4 +200,17 @@ internal class LocalPicFilesTest {
         val neg = f.getFullPath("BOGUS")
         assertEquals("", neg)
     }
+    val cacheName = "cache.dat"
+    val map = mapOf("foo" to "fileName", "abcde" to "hash")
+    @Test
+    fun testWriteCache() {
+        writeCache(cacheName, map)
+    }
+
+    @Test
+    fun testReadCache() {
+        val result = readCache(cacheName)
+        assertEquals(result, map)
+    }
+
 }
