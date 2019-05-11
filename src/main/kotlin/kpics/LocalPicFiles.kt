@@ -4,6 +4,7 @@ import mu.KLogger
 import mu.KotlinLogging
 import org.jetbrains.exposed.sql.transactions.transaction
 import java.io.*
+import java.net.InetAddress
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -11,8 +12,6 @@ import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentSkipListSet
 import java.util.concurrent.atomic.AtomicLong
-import kotlin.collections.ArrayList
-import kotlin.collections.HashMap
 import kotlin.collections.set
 
 data class DirDupeStat(var files: Int, var dupes: Int,
@@ -55,6 +54,8 @@ class LocalPicFiles(private val basePathStr: String) : AbstractPicCollection() {
     override val paths: TreeSet<Path>
         get() = filePaths
     // <<path1, path2>, <path23, path99, path1234... >, ... >
+    // this will return the same value on each call, which is good if you want faster subsequent calls
+    // but bad if you're manually adding files after it was called once.
     val dupeFileSets: Set<Set<String>> by lazy(::getDupes)
 
     fun printFiles() {
@@ -172,7 +173,7 @@ class LocalPicFiles(private val basePathStr: String) : AbstractPicCollection() {
         val dupeSizes = getDupeSizes(filePaths)
         logger.info("Based upon size, dupe count: ${dupeSizes.size}")
         // checksum -> [ set of files matching that checksum ]
-        val dupeHash = getDupeHash(dupeSizes)
+        val dupeHash = getDupeHashes(dupeSizes)
         logger.info("After checking checksum of size-based dupes : ${dupeSizes.size}")
         return dupeHash.values.toSet()
     }
@@ -216,11 +217,13 @@ class LocalPicFiles(private val basePathStr: String) : AbstractPicCollection() {
      * @param priorDupes input hashmap of <filesize -> <list of files of that size>>
      * @return map of checksum:<list of files with that checksum>
      */
-    private fun getDupeHash(priorDupes: Map<Long, ConcurrentSkipListSet<String>>):
+    private fun getDupeHashes(priorDupes: Map<Long, ConcurrentSkipListSet<String>>):
             Map<String, Set<String>> {
         var allDupeHashes = ConcurrentHashMap<String, ConcurrentSkipListSet<String>>()
-        val cacheFile = "hash_cache.dat"
+        val host = InetAddress.getLocalHost().hostName
+        val cacheFile = "hash_cache_$host.dat"
         if (File(cacheFile).exists()) {
+            logger.info("loading cached data from $cacheFile")
             return getCache(cacheFile, priorDupes)
         }
         logger.info("starting hash-based dupe check")
@@ -253,8 +256,10 @@ class LocalPicFiles(private val basePathStr: String) : AbstractPicCollection() {
             }
         }
         logger.info("complete: hash-based dupe check")
-        ObjectOutputStream(FileOutputStream(cacheFile)).use {
-            it.writeObject(allDupeHashes)
+        if(allDupeHashes.size > 1000) {
+            ObjectOutputStream(FileOutputStream(cacheFile)).use {
+                it.writeObject(allDupeHashes)
+            }
         }
         return allDupeHashes
     }
@@ -267,7 +272,7 @@ class LocalPicFiles(private val basePathStr: String) : AbstractPicCollection() {
             entry.value.forEach {
                 if (File(it).lastModified() > cacheDate) {
                     File(cacheFile).delete()
-                    return getDupeHash(priorDupes)
+                    return getDupeHashes(priorDupes)
                 }
             }
         }
@@ -280,7 +285,7 @@ class LocalPicFiles(private val basePathStr: String) : AbstractPicCollection() {
             entry.value.forEach {
                 if (!File(it).exists() || File(it).lastModified() > cacheDate) {
                     File(cacheFile).delete()
-                    return getDupeHash(priorDupes)
+                    return getDupeHashes(priorDupes)
                 }
             }
         }

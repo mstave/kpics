@@ -122,3 +122,4 @@ hs_err_pid*
 
 .idea/modules/**/*.iml
 /src/test/test.iml
+/hash_cache.dat

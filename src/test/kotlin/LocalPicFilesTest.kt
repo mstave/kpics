@@ -99,13 +99,14 @@ internal class LocalPicFilesTest {
             println(d2.await().size)
             assertNotNull(d1)
             assertNotNull(d2)
-            assertTrue(d1.await().size > 0)
+            assertTrue(d1.await().isNotEmpty())
         }
     }
 
     @Test
     fun testForEachDupe() {
-        getTestPics().dupeFileSets.forEach {
+        val sets = getTestPics().dupeFileSets
+        sets.forEach {
             println(it)
         }
     }

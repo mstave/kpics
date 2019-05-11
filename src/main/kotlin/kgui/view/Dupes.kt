@@ -24,33 +24,43 @@ class Dupes : View() {
     private val logger: KLogger = KotlinLogging.logger {}
     private val status: TaskStatus by inject()
     private val dupeDirView = listview(dupeC.dupeDirs) {
+        multiSelect(true)
         bindSelected(dupeC.selectedDir)
-//        updateHeight()
     }
     private val allDupeFileView = listview(dupeC.dupeStrings) {
         multiSelect(true)
-        dupeC.selectedFiles.setAll(selectionModel.selectedItems)
-//                        vgrow = Priority.ALWAYS
-//                        selectionModel.selectedItems.onChange {
-////                            selectedFiles
-//                        }
-//                        this.selectionModel.
-//                            selectedFiles = selectionModel.selectedItems
-        dupeC.selectedDir.onChange { _ ->
-            selectWhere {
-                it.startsWith(dupeC.selectedDir.get())
-            }
-//                            selectedFiles.setAll(selectionModel.selectedItems)
-            //                           items.forEach {
-            //                               if (it.startsWith(selectedDir.get())) {
-            //                                   selectionModel.selectedItems.add(it)
-            //                               }
-            //                           }
-        }
+//        dupeC.selectedFiles.setAll(selectionModel.selectedItems)
+//        dupeC.selectedDir.onChange { _ ->
+//            selectWhere {
+//                it.startsWith(dupeC.selectedDir.get())
+//            }
+//       }
         dupeC.picCollectionsCont.allPicLibs.onChange {
             updateDiffs()
         }
         updateDiffs()
+    }
+    private val selectedView = listview(dupeC.selectedFiles) {
+        multiSelect(true)
+        vgrow = Priority.SOMETIMES
+    }
+    private val dupesOfSelectedView = listview<String> {
+        multiSelect(true)
+        fitToParentSize()
+        dupeC.selectedFiles.onChange { sFiles ->
+            items.setAll(sFiles.list.flatMap {
+                dupeC.concatedPf.getDupesForFile(it)
+            }.sorted())
+        }
+        val selectedSelected= SimpleStringProperty("")
+        selectedView.bindSelected(selectedSelected)
+        selectedSelected.onChange {
+            logger.info("selection changed")
+            selectionModel.clearSelection()
+            selectWhere {
+              selectedSelected.get() in dupeC.concatedPf.getDupesForFile(it)
+            }
+        }
     }
     private val defaultWidth = 600.0
     //    val selectedFiles = SimpleListProperty<String>()
@@ -75,19 +85,21 @@ class Dupes : View() {
                 visibleWhen(!status.running)
                 managedWhen(!status.running)
                 titledpane("Select duplicated files:") {
-//                    hgrow = Priority.
+                    //                    hgrow = Priority.
                     hbox {
                         titledpane(Bindings.concat(" Directories with all dupes (",
                                                    dupeC.dupeDirCount, ")")) {
-                            prefWidth=defaultWidth
+                            prefWidth = defaultWidth
                             vbox {
                                 hbox {
                                     button("Select") {
                                         tooltip("Add all files in the chosen directories to selected list")
                                         action {
-                                            dupeC.selectedFiles.addAll(dupeC.concatedPf.getDupesInDir(
-                                                    Paths.get(dupeC.selectedDir.value)).map { it.toString() })
-                                            dupeC.selectedFiles.sort()
+                                            dupeDirView.selectionModel.selectedItems.forEach { selectedDir ->
+                                                dupeC.selectedFiles.addAll(dupeC.concatedPf.getDupesInDir(
+                                                        Paths.get(selectedDir)).map { it.toString() })
+                                                dupeC.selectedFiles.sort()
+                                            }
                                         }
                                     }
                                     button("Deselect files from this directory") {
@@ -97,28 +109,24 @@ class Dupes : View() {
                                             dupeC.selectedFiles.sort()
                                         }
                                     }
-                                    button("Clear selection") {
-                                        action {
-                                            dupeDirView.selectionModel.clearSelection()
-                                        }
-                                    }
                                 }
                                 this += dupeDirView
                             }
                         }
                         titledpane(Bindings.concat(" All Duplicated Files (", dupeC.dupeCount, ")")) {
-//                            hgrow = Priority.SOMETIMES
+                            //                            hgrow = Priority.SOMETIMES
                             prefWidth = defaultWidth
                             vbox {
                                 hbox {
-                                    button("Add") {
+                                    button("Select") {
                                         tooltip("Add these files to selected list")
                                         action {
-                                            dupeC.selectedFiles.addAll(dupeC.selectedFromAllFiles)
+                                            dupeC.selectedFiles.addAll(allDupeFileView.selectionModel.selectedItems)
                                         }
                                     }
-                                    button("clear") {
+                                    button("Deselect") {
                                         action {
+                                            dupeC.selectedFiles.removeAll(allDupeFileView.selectionModel.selectedItems)
                                             allDupeFileView.selectionModel.clearSelection()
                                         }
                                     }
@@ -131,28 +139,18 @@ class Dupes : View() {
                 titledpane("Act upon selected duplicated files:") {
                     hbox {
                         titledpane(Bindings.concat(" Selected Duplicated Files (", dupeC.dupeCount, ")")) {
-                            prefWidth= defaultWidth
-                            listview(dupeC.selectedFiles) {
-                                vgrow = Priority.SOMETIMES
-                            }
+                            prefWidth = defaultWidth
+                            this += selectedView
                         }
                         titledpane("Duplicates of selected files") {
-                            prefWidth= defaultWidth
-                            listview<String> {
-                                fitToParentSize()
-                                dupeC.selectedFiles.onChange { sFiles ->
-                                    items.setAll(sFiles.list.flatMap {
-                                        dupeC.concatedPf.getDupesForFile(it)
-                                    }.sorted())
-                                }
-                            }
+                            prefWidth = defaultWidth
+                            this += dupesOfSelectedView
                         }
                     }
                 }
             }
         }
     }
-
 
     private fun ListView<String>.updateHeight() {
         val rowHeight = 24
@@ -173,10 +171,13 @@ class DupeController : Controller() {
     var dupeCount = SimpleIntegerProperty()
     var dupeDirCount = SimpleIntegerProperty()
     var dupeDirElsewhereCount = SimpleIntegerProperty()
+    // Directory in DupeDirView that's selected
     val selectedDir = SimpleStringProperty("")
+    // Added from DupeDirView and allDupeFileView
     var selectedFiles = observableList<String>()
     var selectedFromAllFiles = observableList<String>()
-    val concatedPf = LocalPicFiles("/dev/null")
+    lateinit var concatedPf: LocalPicFiles
+    //    var concatedPf = LocalPicFiles("/dev/null")
     fun getDupesFromAllLocalCollections(fxTask: FXTask<*>) {
         //        val concatedPf = LocalPicFiles("/dev/null")
         fun updateStatus(completed: Long, total: Long, msg: String, title: String) {
@@ -190,8 +191,12 @@ class DupeController : Controller() {
         }
         logger.info("Looking for dupes")
         val justFiles = picCollectionsCont.allPicLibs.filter { it is LocalPicFiles }.map { it as LocalPicFiles }
+        concatedPf = LocalPicFiles("/dev/null")
         justFiles.forEach {
             concatedPf.filePaths.addAll(it.filePaths)
+        }
+        if (concatedPf.filePaths.isEmpty()) {
+            return
         }
         Platform.runLater {
             pfCount.set(concatedPf.filePaths.count())
