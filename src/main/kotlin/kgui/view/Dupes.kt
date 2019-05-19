@@ -5,6 +5,8 @@ import javafx.beans.binding.Bindings
 import javafx.beans.property.SimpleBooleanProperty
 import javafx.beans.property.SimpleIntegerProperty
 import javafx.beans.property.SimpleStringProperty
+import javafx.scene.control.Alert
+import javafx.scene.control.ButtonBar
 import javafx.scene.control.ListView
 import javafx.scene.layout.Priority
 import kgui.app.PicCollectionsController
@@ -47,24 +49,27 @@ class Dupes : View() {
     private val dupesOfSelectedView = listview<String> {
         multiSelect(true)
         fitToParentSize()
+        // set file list
         dupeC.selectedFiles.onChange { sFiles ->
             items.setAll(sFiles.list.flatMap {
                 dupeC.concatedPf.getDupesForFile(it)
             }.sorted())
         }
-        val selectedSelected= SimpleStringProperty("")
-        selectedView.bindSelected(selectedSelected)
-        selectedSelected.onChange {
-            logger.info("selection changed")
+        // update selected items as source selections change
+        selectedView.selectionModel.selectedItems.onChange { change ->
             selectionModel.clearSelection()
-            selectWhere {
-              selectedSelected.get() in dupeC.concatedPf.getDupesForFile(it)
+            change.list.forEach { poss_change ->
+                poss_change?.let { a_change ->
+                    selectWhere {
+                        it in dupeC.concatedPf.getDupesForFile(a_change)
+                    }
+                }
             }
         }
     }
     private val defaultWidth = 600.0
     //    val selectedFiles = SimpleListProperty<String>()
-    // TODO pass status to dupeC then have dupeC handle the picCollectionsCont.allPicLibs.onChange
+// TODO pass status to dupeC then have dupeC handle the picCollectionsCont.allPicLibs.onChange
     override val root = scrollpane(fitToWidth = true, fitToHeight = true) {
         vbox {
             hbox {
@@ -138,13 +143,60 @@ class Dupes : View() {
                 }
                 titledpane("Act upon selected duplicated files:") {
                     hbox {
-                        titledpane(Bindings.concat(" Selected Duplicated Files (", dupeC.dupeCount, ")")) {
-                            prefWidth = defaultWidth
-                            this += selectedView
+                        vbox {
+                            button("Delete selected duplicate files") {
+                                action {
+                                    //                                    val doit = alert(
+                                    alert(
+                                            type = Alert.AlertType.CONFIRMATION,
+                                            header = "Delete this duplicated files?                                                                                                     ",
+                                            content = selectedView.selectionModel.selectedItems.toString().trimStart(
+                                                    '[').trimEnd(']').trimEnd(','),
+                                            actionFn = { btnType ->
+                                                if (btnType.buttonData == ButtonBar.ButtonData.OK_DONE) {
+                                                    //                                                    controller.deleteUser(toDelete)
+                                                    //                                                    tblUsers.items.remove(toDelete)
+                                                }
+                                            }
+                                         ).width = 900.0
+//                                            .dialogPane.setPrefSize(900.0, 100.0)
+//                                    doit.dialogPane.minWidth = 700.0
+//                                    doit.dialogPane.minHeight = Region.USE_PREF_SIZE
+//                                    selectedView.selectionModel.selectedItems.forEach {
+//                                    }
+//                                    dupeC.selectedFiles.removeAll(allDupeFileView.selectionModel.selectedItems)
+//                                    allDupeFileView.selectionModel.clearSelection()
+                                }
+                            }
+                            titledpane(Bindings.concat(" Selected Duplicated Files (", dupeC.dupeCount, ")")) {
+                                prefWidth = defaultWidth
+                                this += selectedView
+                            }
                         }
-                        titledpane("Duplicates of selected files") {
-                            prefWidth = defaultWidth
-                            this += dupesOfSelectedView
+                        vbox {
+                            button("Delete selected duplicated") {
+                                action {
+                                    alert(
+                                            type = Alert.AlertType.CONFIRMATION,
+                                            header = "Delete duplicates                                                                                               ",
+                                            content = "Delete these files\n" + selectedView.selectionModel.selectedItems,
+                                            actionFn = { btnType ->
+                                                if (btnType.buttonData == ButtonBar.ButtonData.OK_DONE) {
+//                                                    controller.deleteUser(toDelete)
+//                                                    tblUsers.items.remove(toDelete)
+                                                }
+                                            }
+                                         ).width = 900.0
+                                    selectedView.selectionModel.selectedItems.forEach {
+                                    }
+                                    dupeC.selectedFiles.removeAll(allDupeFileView.selectionModel.selectedItems)
+                                    allDupeFileView.selectionModel.clearSelection()
+                                }
+                            }
+                            titledpane("Duplicates of selected files") {
+                                prefWidth = defaultWidth
+                                this += dupesOfSelectedView
+                            }
                         }
                     }
                 }
